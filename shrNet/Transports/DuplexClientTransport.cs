@@ -299,13 +299,13 @@ namespace shrNet
                 {
                     size = BitConverter.ToInt32(msg.Buffer, offset);
 
-                    DuplexSocket.AppendHex(_outboundLog, new ReadOnlySpan<byte>(msg.Buffer, offset, size));
+                    _outboundLog.Append(DuplexMessage.GetHex(msg.Buffer, offset, size));
                 }
                 else if (_dataMinSize == 2)
                 {
                     size = BitConverter.ToInt16(msg.Buffer, offset);
 
-                    DuplexSocket.AppendHex(_outboundLog, new ReadOnlySpan<byte>(msg.Buffer, offset, size));
+                    _outboundLog.Append(DuplexMessage.GetHex(msg.Buffer, offset, size));
                 }
                 else
                 {
@@ -315,7 +315,7 @@ namespace shrNet
 
                     size += _dataDelimiter.Length;
 
-                    DuplexSocket.AppendUtf8(_outboundLog, new ReadOnlySpan<byte>(msg.Buffer, offset, size));
+                    _outboundLog.Append(DuplexMessage.GetString(new ReadOnlySpan<byte>(msg.Buffer, offset, size)));
                 }
 
                 string message = _outboundLog.ToString();
@@ -349,11 +349,11 @@ namespace shrNet
             _inboundLog.Append("] ");
 
             if (_dataMinSize != 0)
-                DuplexSocket.AppendHex(_inboundLog, msg.AsReadOnlySpan());
+                _inboundLog.Append(DuplexMessage.GetHex(msg.Buffer, 0, msg.Length));
             else
             {
-                DuplexSocket.AppendUtf8(_inboundLog, msg.AsReadOnlySpan());
-                DuplexSocket.AppendUtf8(_inboundLog, _dataDelimiter);
+                _inboundLog.Append(DuplexMessage.GetString(msg.AsReadOnlySpan()));
+                _inboundLog.Append(DuplexMessage.GetString(_dataDelimiter));
             }
 
             string message = _inboundLog.ToString();

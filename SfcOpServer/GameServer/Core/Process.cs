@@ -1,4 +1,7 @@
-﻿using shrServices;
+﻿#pragma warning disable IDE0028
+
+using shrNet;
+using shrServices;
 
 using System;
 using System.Collections.Generic;
@@ -312,7 +315,7 @@ namespace SfcOpServer
                     return;
             }
 
-            Console.WriteLine("SERVER OPCODE: " + Utils.GetHex(buffer, 0, BitConverter.ToInt32(buffer, 0)));
+            Console.WriteLine("SERVER OPCODE: " + DuplexMessage.GetHex(buffer, 0, BitConverter.ToInt32(buffer, 0)));
 
             throw new NotSupportedException();
         }
@@ -2800,7 +2803,7 @@ namespace SfcOpServer
             else
                 warning = "The IPAddress reported by your game doesn't match the IPAddress seen by the server!";
 
-            sendWarning:
+        sendWarning:
 
             // [R] d300000000020000000200000002000100be000000 0100000001000000 b20000005468697320736572766572206861732064657465637465642074686174206f6e65206f72206d6f7265206f6620746865206e65636573736172792066696c657320726571756972656420746f20636f6e6e656374206f7220656974686572206d697373696e67206f7220696e636f6d70617469626c652e20204c697374206f66206f6666656e64696e672066696c65733a206d65745f78706174726f6c2e7363727c204d697373696e672046696c65207c20
 

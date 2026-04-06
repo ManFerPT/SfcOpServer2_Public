@@ -1,4 +1,6 @@
-﻿using System;
+﻿using shrNet;
+
+using System;
 using System.Buffers;
 using System.Buffers.Text;
 using System.Diagnostics;
@@ -40,59 +42,7 @@ namespace shrServices
 
             MD5.TryHashData(b, h, out _);
 
-            return GetHex(h);
-        }
-
-        public static string GetHex(Span<byte> buffer)
-        {
-            int count = buffer.Length;
-
-            if (count > 0)
-            {
-                char[] h = ArrayPool<char>.Shared.Rent(count << 1);
-                int i = 0;
-
-                for (int offset = 0; offset < count; offset++)
-                {
-                    h[i] = HexChars[buffer[offset] >> 4];
-                    h[i + 1] = HexChars[buffer[offset] & 15];
-
-                    i += 2;
-                }
-
-                string result = new(h, 0, i);
-
-                ArrayPool<char>.Shared.Return(h);
-
-                return result;
-            }
-
-            return string.Empty;
-        }
-
-        public static string GetHex(byte[] buffer, int offset, int count)
-        {
-            if (count > 0)
-            {
-                char[] h = ArrayPool<char>.Shared.Rent(count << 1);
-                int i = 0;
-
-                for (count += offset; offset < count; offset++)
-                {
-                    h[i] = HexChars[buffer[offset] >> 4];
-                    h[i + 1] = HexChars[buffer[offset] & 15];
-
-                    i += 2;
-                }
-
-                string result = new(h, 0, i);
-
-                ArrayPool<char>.Shared.Return(h);
-
-                return result;
-            }
-
-            return string.Empty;
+            return DuplexMessage.GetHex(h);
         }
 
         public static uint HexToByte(byte[] buffer, int index)

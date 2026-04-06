@@ -253,13 +253,13 @@ namespace shrNet
             _log.Append("] ");
 
             if (_service._dataMinSize != 0)
-                DuplexSocket.AppendHex(_log, msg);
+                _log.Append(DuplexMessage.GetHex(msg));
             else
             {
-                DuplexSocket.AppendUtf8(_log, msg);
+                _log.Append(DuplexMessage.GetString(msg));
 
                 if (isFromClient)
-                    DuplexSocket.AppendUtf8(_log, _service._dataDelimiter);
+                    _log.Append(DuplexMessage.GetString(_service._dataDelimiter));
             }
 
             string message = _log.ToString();
