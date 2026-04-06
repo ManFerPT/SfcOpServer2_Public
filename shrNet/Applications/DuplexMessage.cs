@@ -62,14 +62,13 @@ namespace shrNet
         // static functions
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static string GetHex(ref byte bytes, nint length)
+        private static string GetHex(ref byte bytes, nint length)
         {
             if (length == 0)
                 return string.Empty;
 
             char[] chars = ArrayPool<char>.Shared.Rent((int)(length << 1));
-
-            ref uint destiny = ref Unsafe.As<char, uint>(ref MemoryMarshal.GetArrayDataReference(chars));
+            ref uint destination = ref Unsafe.As<char, uint>(ref MemoryMarshal.GetArrayDataReference(chars));
             ref byte hexadecimals = ref MemoryMarshal.GetArrayDataReference(_hexadecimals);
 
             for (nint i = 0; i < length; i++)
@@ -79,7 +78,7 @@ namespace shrNet
                 uint b = Unsafe.Add(ref hexadecimals, a & 15);
                 uint c = Unsafe.Add(ref hexadecimals, a >> 4);
 
-                Unsafe.WriteUnaligned(ref Unsafe.As<uint, byte>(ref Unsafe.Add(ref destiny, i)), b << 16 | c);
+                Unsafe.WriteUnaligned(ref Unsafe.As<uint, byte>(ref Unsafe.Add(ref destination, i)), b << 16 | c);
             }
 
             string hex = new(chars, 0, (int)(length << 1));
@@ -89,13 +88,13 @@ namespace shrNet
             return hex;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public static string GetHex(Span<byte> bytes)
         {
             return GetHex(ref MemoryMarshal.GetReference(bytes), bytes.Length);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public static string GetHex(byte[] array, int start, int length)
         {
             return GetHex(ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(array), start), length);
