@@ -284,7 +284,7 @@ namespace SfcOpServer
         private List<ShipData>[][] _homeWorlds;
         private List<ShipData>[][] _coreWorlds;
         private List<ShipData>[][] _colonies;
-        private List<ShipData>[][] _orbitalStations; // listed as 'ClassTypes.kClassPlanets' and 'MetaVerseMap.AsteroidBase1-3', we assume it is a base orbiting an uninhabited world (ex: gas giant)
+        private List<ShipData>[][] _orbitalStations; // listed as 'ClassTypes.kClassPlanets' and 'MetaVerseMap.AsteroidBase1-3', we assume it is some kind of uninhabited world (ex: gas giant) with bases\stations orbiting on low orbit (invisible to the naked eye)
 
         // ... MetaVerseMap.Bases
         private List<ShipData>[] _starbases;
