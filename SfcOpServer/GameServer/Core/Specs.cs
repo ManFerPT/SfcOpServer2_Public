@@ -1,4 +1,6 @@
-﻿using shrServices;
+﻿#pragma warning disable IDE0028
+
+using shrServices;
 
 using System;
 using System.Collections.Generic;
@@ -132,7 +134,7 @@ namespace SfcOpServer
                     throw new NotSupportedException($"'{data.ClassName}' has an unsupported '{msg}'.");
                 }
 
-                if (data.HullType == HullTypes.kHullAsteroidBase || data.HullType > HullTypes.kFighter && data.HullType != HullTypes.kHullPlanet)
+                if (data.HullType > HullTypes.kFighter && data.HullType != HullTypes.kHullPlanet)
                     ThrowError(data, "Hull Type");
 
                 if (data.ClassName.StartsWith("O-", StringComparison.OrdinalIgnoreCase) || data.ClassName.StartsWith("M-", StringComparison.OrdinalIgnoreCase))
@@ -146,7 +148,10 @@ namespace SfcOpServer
                 if (data.YearFirstAvailable > data.YearLastAvailable)
                     ThrowError(data, "Year First\\Last Available");
 
-                if (data.SizeClass < 1 || data.SizeClass > 6)
+                if (
+                    (data.ClassType != ClassTypes.kClassPlanets && (data.SizeClass < 1 || data.SizeClass > 6)) ||
+                    (data.ClassType == ClassTypes.kClassPlanets && data.SizeClass != 0)
+                )
                     ThrowError(data, "Size Class");
 
                 if (data.Shield1 + (data.Shield2And6 + data.Shield3And5 << 1) + data.Shield4 != data.ShieldTotal)
@@ -567,17 +572,17 @@ namespace SfcOpServer
                             case "uw1":
                             case "uninhabitedworld":
                             case "uninhabitedworld1":
-                                _asteroidBases[(int)data.Race][0].Add(data);
+                                _orbitalStations[(int)data.Race][0].Add(data);
                                 break;
 
                             case "uw2":
                             case "uninhabitedworld2":
-                                _asteroidBases[(int)data.Race][1].Add(data);
+                                _orbitalStations[(int)data.Race][1].Add(data);
                                 break;
 
                             case "uw3":
                             case "uninhabitedworld3":
-                                _asteroidBases[(int)data.Race][2].Add(data);
+                                _orbitalStations[(int)data.Race][2].Add(data);
                                 break;
 
                             default:
@@ -596,9 +601,10 @@ namespace SfcOpServer
                                 _weaponPlatforms[(int)data.Race].Add(data);
                                 break;
 
-                            case HullTypes.kHullStarDock: // fleet repair docks
-                            case HullTypes.kBox:          // repair boxes
-                            case HullTypes.kMineHull:     // player buoys
+                            case HullTypes.kHullAsteroidBase: // mining station
+                            case HullTypes.kHullStarDock:     // fleet repair dock
+                            case HullTypes.kBox:              // repair box
+                            case HullTypes.kMineHull:         // player buoy
                                 break;
 
                             default:

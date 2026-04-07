@@ -1,4 +1,6 @@
-﻿#if DEBUG
+﻿#pragma warning disable IDE0028
+
+#if DEBUG
 //#define DEBUG_SETTINGS
 //#define RESET_VALIDADATED_CLIENT_FILES
 #endif
@@ -278,11 +280,13 @@ namespace SfcOpServer
 
         private RaceMasks[] _alliances;
 
+        // ... MetaVerseMap.Planets
         private List<ShipData>[][] _homeWorlds;
         private List<ShipData>[][] _coreWorlds;
         private List<ShipData>[][] _colonies;
-        private List<ShipData>[][] _asteroidBases;
+        private List<ShipData>[][] _orbitalStations; // listed as 'ClassTypes.kClassPlanets' and 'MetaVerseMap.AsteroidBase1-3', we assume it is a base orbiting an uninhabited world (ex: gas giant)
 
+        // ... MetaVerseMap.Bases
         private List<ShipData>[] _starbases;
         private List<ShipData>[] _battleStations;
         private List<ShipData>[] _baseStations;
@@ -706,7 +710,7 @@ namespace SfcOpServer
             _homeWorlds = new List<ShipData>[(int)Races.kNumberOfRaces][];
             _coreWorlds = new List<ShipData>[(int)Races.kNumberOfRaces][];
             _colonies = new List<ShipData>[(int)Races.kNumberOfRaces][];
-            _asteroidBases = new List<ShipData>[(int)Races.kNumberOfRaces][];
+            _orbitalStations = new List<ShipData>[(int)Races.kNumberOfRaces][];
 
             _starbases = new List<ShipData>[(int)Races.kNumberOfRaces];
             _battleStations = new List<ShipData>[(int)Races.kNumberOfRaces];
@@ -719,14 +723,14 @@ namespace SfcOpServer
                 _homeWorlds[i] = new List<ShipData>[3];
                 _coreWorlds[i] = new List<ShipData>[3];
                 _colonies[i] = new List<ShipData>[3];
-                _asteroidBases[i] = new List<ShipData>[3];
+                _orbitalStations[i] = new List<ShipData>[3];
 
                 for (int j = 0; j < 3; j++)
                 {
                     _homeWorlds[i][j] = [];
                     _coreWorlds[i][j] = [];
                     _colonies[i][j] = [];
-                    _asteroidBases[i][j] = [];
+                    _orbitalStations[i][j] = [];
                 }
 
                 _starbases[i] = [];
@@ -1873,7 +1877,7 @@ namespace SfcOpServer
             var homeWorlds = new PriorityQueue<ShipData, int>[(int)Races.kNumberOfRaces][];
             var coreWorlds = new PriorityQueue<ShipData, int>[(int)Races.kNumberOfRaces][];
             var colonies = new PriorityQueue<ShipData, int>[(int)Races.kNumberOfRaces][];
-            var asteroidBases = new PriorityQueue<ShipData, int>[(int)Races.kNumberOfRaces][];
+            var orbitalStations = new PriorityQueue<ShipData, int>[(int)Races.kNumberOfRaces][];
 
             var starbases = new PriorityQueue<ShipData, int>[(int)Races.kNumberOfRaces];
             var battleStations = new PriorityQueue<ShipData, int>[(int)Races.kNumberOfRaces];
@@ -1886,7 +1890,7 @@ namespace SfcOpServer
                 homeWorlds[i] = new PriorityQueue<ShipData, int>[3];
                 coreWorlds[i] = new PriorityQueue<ShipData, int>[3];
                 colonies[i] = new PriorityQueue<ShipData, int>[3];
-                asteroidBases[i] = new PriorityQueue<ShipData, int>[3];
+                orbitalStations[i] = new PriorityQueue<ShipData, int>[3];
             }
 
             // declares the function that we will use
@@ -1963,11 +1967,11 @@ namespace SfcOpServer
                         else if (hex.PlanetType == PlanetTypes.kPlanetColony3)
                             Dequeue(race, _colonies[(int)race][2], ref colonies[(int)race][2], out data);
                         else if (hex.PlanetType == PlanetTypes.kPlanetAsteroidBase1)
-                            Dequeue(race, _asteroidBases[(int)race][0], ref asteroidBases[(int)race][0], out data);
+                            Dequeue(race, _orbitalStations[(int)race][0], ref orbitalStations[(int)race][0], out data);
                         else if (hex.PlanetType == PlanetTypes.kPlanetAsteroidBase2)
-                            Dequeue(race, _asteroidBases[(int)race][1], ref asteroidBases[(int)race][1], out data);
+                            Dequeue(race, _orbitalStations[(int)race][1], ref orbitalStations[(int)race][1], out data);
                         else if (hex.PlanetType == PlanetTypes.kPlanetAsteroidBase3)
-                            Dequeue(race, _asteroidBases[(int)race][2], ref asteroidBases[(int)race][2], out data);
+                            Dequeue(race, _orbitalStations[(int)race][2], ref orbitalStations[(int)race][2], out data);
                         else
                             throw new NotSupportedException();
 

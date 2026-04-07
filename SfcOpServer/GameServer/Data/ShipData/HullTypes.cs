@@ -14,7 +14,7 @@ namespace SfcOpServer
         kSB, // star base
         kBS, // base station
         kBT, // battle station
-        kHullAsteroidBase,    // not used!
+        kHullAsteroidBase,    // mining station
         kHullListeningPost,   // BASE
         kHullDefensePlatform, // BASE: weapons platform
         kHullStarDock,        // fleet repair dock
