@@ -28,8 +28,7 @@ namespace SfcOpClient
 
             static void ShowError(string msg)
             {
-                Console.Write($"ERROR: {msg}\r\n");
-                Console.ReadLine();
+                Console.Write($"ERROR: {msg}\r\n\r\n");
             }
 
             string t;
@@ -43,9 +42,15 @@ namespace SfcOpClient
 
             if (!gf.Load(t))
             {
-                ShowError($"'SfcOpClient.gf' doesn't exist or is invalid!\r\n\r\n");
+                if (File.Exists(t))
+                    ShowError("'SfcOpClient.gf' is invalid!");
+                else
+                {
+                    ShowError("'SfcOpClient.gf' is missing!");
+                    CreateCfg(t);
+                }
 
-                return;
+                goto somethingWentWrong;
             }
 
             // ... tries to get the gamePath
@@ -223,6 +228,26 @@ namespace SfcOpClient
             Console.Write("Press ENTER to exit.\r\n");
 
             Console.ReadLine();
+        }
+
+        private static void CreateCfg(string filename)
+        {
+            string contents = $@"
+Launch = ""StarFleetOP.exe""
+
+[Meta]
+Ip = ""192.168.1.64""
+Port = 27001
+
+[3D]
+Width = 1280
+Height = 720
+
+[Cpu]
+Affinity = 0 // bitmask, set to 1 in windows 10
+"[2..];
+
+            File.WriteAllText(filename, contents);
         }
 
         private static int UpdateSetupFiles(string directoryName, string fileName)
