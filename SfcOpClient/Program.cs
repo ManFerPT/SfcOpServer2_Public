@@ -46,7 +46,7 @@ namespace SfcOpClient
                     ShowError("'SfcOpClient.gf' is invalid!");
                 else
                 {
-                    ShowError("'SfcOpClient.gf' is missing!");
+                    ShowError("'SfcOpClient.gf' was missing!\r\nCreating the file...");
                     CreateCfg(t);
                 }
 
@@ -72,7 +72,11 @@ namespace SfcOpClient
             // checks if we need to create or update any setup files
 
             if (UpdateSetupFiles(directoryName, fileName) != 0)
-                return;
+            {
+                ShowError("One of the setup files was missing!\r\nCreating new files...");
+
+                goto somethingWentWrong;
+            }
 
             // ... tries to get the remoteEP
 
