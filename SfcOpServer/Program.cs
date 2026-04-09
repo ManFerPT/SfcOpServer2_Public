@@ -106,8 +106,8 @@ namespace SfcOpServer
 
             string[] motd =
             [
-                appName + " (C) D4v1ks",
-                "SFC2OP " + GamespyService.ClientVersion + " Patch (C) D4v1ks, TarMinyatur, Adam, Darkdrone",
+                appName + " (C) D4v1ks 2020-2026",
+                "H&S TEAM: D4v1ks (programmer), Adam (backer), TarMinyatur (playtester)",
             ];
 
             string[] logo =
