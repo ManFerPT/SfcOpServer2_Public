@@ -1,4 +1,6 @@
-﻿using Silk.NET.OpenAL;
+﻿// NuGet dependencies: MP3Sharp (1.0.5) and Silk.NET.OpenAL (2.23.0)
+
+using Silk.NET.OpenAL;
 using MP3Sharp;
 
 using System;
@@ -7,7 +9,7 @@ using System.Threading.Tasks;
 using System.Collections.Concurrent;
 using System.Threading;
 
-namespace SfcOpClient
+namespace shrAudio
 {
     public static class AudioPlayer
     {

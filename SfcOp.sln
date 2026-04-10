@@ -27,6 +27,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Resources", "Resources", "{
 		README.md = README.md
 	EndProjectSection
 EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "shrAudio", "shrAudio\shrAudio.shproj", "{E15D3342-1932-48B6-98E1-0442C3C8AD27}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -59,10 +61,12 @@ Global
 		shrGF\shrGF.projitems*{4bc4c71d-1adb-4dc0-8b79-1a065b9bd84a}*SharedItemsImports = 13
 		shrServices\shrServices.projitems*{628978c7-6d09-4ddc-be9b-dcb8c8c6ea0a}*SharedItemsImports = 13
 		shrNet\shrNet.projitems*{ac7ad18c-7838-4ca3-826a-1ac07b300cc1}*SharedItemsImports = 13
+		shrAudio\shrAudio.projitems*{dfbb1f67-31f2-41b2-a5bc-f76962f47390}*SharedItemsImports = 5
 		shrGF\shrGF.projitems*{dfbb1f67-31f2-41b2-a5bc-f76962f47390}*SharedItemsImports = 5
 		shrNet\shrNet.projitems*{dfbb1f67-31f2-41b2-a5bc-f76962f47390}*SharedItemsImports = 5
 		shrQ3\shrQ3.projitems*{dfbb1f67-31f2-41b2-a5bc-f76962f47390}*SharedItemsImports = 5
 		shrServices\shrServices.projitems*{dfbb1f67-31f2-41b2-a5bc-f76962f47390}*SharedItemsImports = 5
+		shrAudio\shrAudio.projitems*{e15d3342-1932-48b6-98e1-0442c3c8ad27}*SharedItemsImports = 13
 		shrQ3\shrQ3.projitems*{e1f1176b-056f-4625-b6e4-c28a517f175b}*SharedItemsImports = 13
 	EndGlobalSection
 EndGlobal
