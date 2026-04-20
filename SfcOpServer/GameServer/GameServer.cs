@@ -11,6 +11,7 @@ using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace SfcOpServer
@@ -57,12 +58,17 @@ namespace SfcOpServer
             _client6667 = _ircService.CreateInternalClient();
         }
 
-        public async Task StartAsync()
+        public void Start()
         {
-            Console.Write("CAMPAIGN: Starting...\n");
-
             InitializeData();
             InitializeCampaign();
+
+            _ = Task.Factory.StartNew(StartAsync, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+        }
+
+        private async Task StartAsync()
+        {
+            Console.Write("CAMPAIGN: Starting...\n");
 
             Task ircServiceTask = _ircService.StartAsync();
 

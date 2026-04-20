@@ -156,7 +156,7 @@ namespace SfcOpServer
             {
                 server = new GameServer(privateIP, 27000, appDirectory, motd, logo);
 
-                server.StartAsync().FireAndForget();
+                server.Start();
             }
 
 #if DEBUG

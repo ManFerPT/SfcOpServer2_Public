@@ -28,6 +28,9 @@ namespace SfcOpServer
         private const string defaultServerName = "New_Server";
         private const string defaultServerDescription = "This is the new server campaign.";
 
+        private const int defaultMaxPlayers = 1024;
+        private const int defaultMaxLoggedOnPlayers = 32;
+
         private const int defaultDifficultyLevel = 2;  // 0 - 5
         private const int defaultStartingEra = 0; // 0 - 3
 
@@ -46,6 +49,7 @@ namespace SfcOpServer
 
         public const int MaxFleetSize = 12; // needs to match the script
 
+        private const int maxStartingPrestige = 1000000;
         private const int maxHumanFleetSize = 3;
 
         // cpu movement
@@ -360,16 +364,22 @@ namespace SfcOpServer
             _hostName = gf.GetValue("", "Name", defaultServerName);
             _gameType = gf.GetValue("", "Description", defaultServerDescription);
 
-            _maxNumPlayers = 10000;
+            _maxNumPlayers = gf.GetValue("", "MaxPlayers", defaultMaxPlayers);
             _numPlayers = 0;
 
-            _maxNumLoggedOnPlayers = 0;
+            if (_maxNumPlayers < 0)
+                throw new NotSupportedException("The <MaxNumPlayers> needs to be a positive number");
+
+            _maxNumLoggedOnPlayers = gf.GetValue("", "MaxLoggedOnPlayers", defaultMaxLoggedOnPlayers);
             _numLoggedOnPlayers = 0;
+
+            if (_maxNumLoggedOnPlayers > _maxNumPlayers)
+                throw new NotSupportedException("The <MaxNumLoggedOnPlayers> can't be higher than <MaxNumPlayers>");
 
             _raceList = (uint)RaceMasks.AllEmpires;
 
             if ((_raceList & ~(uint)RaceMasks.AllEmpires) != 0u)
-                throw new NotSupportedException(); // only empires are supported. cartels fulfill a support role
+                throw new NotSupportedException(); // only empires are supported. cartels are meant to fulfill a support role
 
             // initializes the server side
 
@@ -384,12 +394,12 @@ namespace SfcOpServer
             _difficultyLevel = gf.GetValue("", "DifficultyLevel", defaultDifficultyLevel);
 
             if (_difficultyLevel < 0 || _difficultyLevel > 5)
-                throw new NotSupportedException();
+                throw new NotSupportedException("The <DifficultyLevel> must be a number between 0 and 5");
 
             _startingEra = gf.GetValue("", "Era", defaultStartingEra);
 
             if (_startingEra < 0 || _startingEra > 3)
-                throw new NotSupportedException();
+                throw new NotSupportedException("The <StartingEra> must be a number between 0 and 3");
 
             // server files
 
@@ -419,7 +429,7 @@ namespace SfcOpServer
                 _startingRank[1] > _startingRank[2] ||
                 _startingRank[2] > _startingRank[3]
             )
-                throw new NotSupportedException();
+                throw new NotSupportedException($"The <Rank> for the different eras must be a number between 0 and {(int)Ranks.Total - 1}, and smaller or equal than the next one.");
 
             _startingPrestige =
             [
@@ -431,13 +441,13 @@ namespace SfcOpServer
 
             if (
                 _startingPrestige[0] < 0 ||
-                _startingPrestige[3] > 1000000 ||
+                _startingPrestige[3] > maxStartingPrestige ||
 
                 _startingPrestige[0] > _startingPrestige[1] ||
                 _startingPrestige[1] > _startingPrestige[2] ||
                 _startingPrestige[2] > _startingPrestige[3]
             )
-                throw new NotSupportedException();
+                throw new NotSupportedException($"The <Prestige> for the different eras must be a number between 0 and {maxStartingPrestige}, and smaller or equal than the next one.");
 
             _cpuMovements = [];
             _humanMovements = [];
@@ -445,11 +455,14 @@ namespace SfcOpServer
             Contract.Assert(defaultCpuMovementDelay < defaultCpuMovementMinRest && defaultCpuMovementMinRest < defaultCpuMovementMaxRest);
 
             _cpuMovementDelay = gf.GetValue("Character/Movement", "CpuDelay", defaultCpuMovementDelay);
+
+            if (_cpuMovementDelay < 1 || _cpuMovementDelay > 3)
+                throw new NotSupportedException("The <Movement> must be a number between 1 and 3");
+
             _cpuMovementMinRest = gf.GetValue("Character/Movement", "CpuMinRest", defaultCpuMovementMinRest);
             _cpuMovementMaxRest = gf.GetValue("Character/Movement", "CpuMaxRest", defaultCpuMovementMaxRest);
 
             if (
-                _cpuMovementDelay < 1 || _cpuMovementDelay > 3 ||
                 _cpuMovementMinRest < defaultCpuMovementMinRest || _cpuMovementMinRest > defaultCpuMovementMaxRest ||
                 _cpuMovementMaxRest < defaultCpuMovementMinRest || _cpuMovementMaxRest > defaultCpuMovementMaxRest ||
                 _cpuMovementMinRest > _cpuMovementMaxRest
