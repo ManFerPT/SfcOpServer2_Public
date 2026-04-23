@@ -73,24 +73,19 @@ namespace SfcOpServer
 
 #if DEBUG
             string appDirectory = "D:\\Games\\Starfleet Command 2 Orion Pirates\\";
+
+            Contract.Assert(Directory.Exists(appDirectory));
 #else
             string appDirectory = AppContext.BaseDirectory;
 #endif
 
-            if (!Directory.Exists(appDirectory))
-            {
-                Console.Write("ERROR: directory not found!\r\n");
-
-                return;
-            }
-
             AssemblyName app = Assembly.GetEntryAssembly().GetName();
 
-            string appName = app.Name + " " + app.Version.ToString();
+            string appName = $"{app.Name} {app.Version}";
 
             string[] motd =
             [
-                appName + " (C) D4v1ks 2020-2026",
+                $"{appName} (C) D4v1ks 2020-2026",
                 "Server Credits: D4v1ks (programmer), Adam (backer), TarMinyatur (playtester)",
             ];
 
@@ -141,8 +136,6 @@ namespace SfcOpServer
 
             data = Console.ReadLine();
 #else
-            Console.Write("Starting the new server...");
-
             data = "r";
 #endif
 
@@ -214,7 +207,7 @@ namespace SfcOpServer
                 ProcessStartInfo startInfo = new()
                 {
                     WorkingDirectory = appDirectory,
-                    FileName = appDirectory + "/ServerPlatform.exe",
+                    FileName = $"{appDirectory}ServerPlatform.exe",
                     UseShellExecute = true
                 };
 
@@ -226,6 +219,8 @@ namespace SfcOpServer
                 WireServer mitm = new(privateIP);
 
                 mitm.StartAsync().FireAndForget();
+
+                Console.Write("Press ENTER, at any time, to exit...\r\n");
             }
 #endif
 
@@ -240,10 +235,6 @@ namespace SfcOpServer
 
             GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, true, true);
             GC.WaitForPendingFinalizers();
-
-            // waits for input
-
-            Console.Write("Press ENTER, at any time, to exit...\r\n\r\n");
 
         tryReadLine:
 

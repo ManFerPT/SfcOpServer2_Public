@@ -68,7 +68,7 @@ namespace SfcOpServer
 
         private async Task StartAsync()
         {
-            Console.Write("CAMPAIGN: Starting...\n");
+            Console.Write("CAMPAIGN: Starting...\r\n");
 
             Task ircServiceTask = _ircService.StartAsync();
 
@@ -78,7 +78,7 @@ namespace SfcOpServer
             Task listener2700Task = _listener27000.StartAsync();
             Task listener2701Task = _listener27001.StartAsync();
 
-            Console.Write("CAMPAIGN: Started\n\n");
+            Console.Write("CAMPAIGN: Started\r\n\r\nPress ENTER, at any time, to exit...\r\n");
 
             await Task.WhenAny(ircServiceTask, campaignTask, advertiseTask, listener2700Task, listener2701Task);
 

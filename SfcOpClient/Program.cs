@@ -43,7 +43,7 @@ namespace SfcOpClient
             if (!gf.Load(t))
             {
                 if (File.Exists(t))
-                    ShowError("'SfcOpClient.gf' is invalid!");
+                    ShowError("'SfcOpClient.gf' is invalid.");
                 else
                 {
                     ShowError("'SfcOpClient.gf' was missing!\r\nCreating the file...");
@@ -64,7 +64,11 @@ namespace SfcOpClient
             string gamePath = Path.Combine(directoryName, fileName);
 
             if (!File.Exists(gamePath))
+            {
+                ShowError($"'{fileName}' not found.");
+
                 goto somethingWentWrong;
+            }
 
             directoryName = Path.GetDirectoryName(gamePath);
             fileName = Path.GetFileName(gamePath);
@@ -118,7 +122,7 @@ namespace SfcOpClient
 
             // displays the settings
 
-            Console.Write($"Game filename : {gamePath}\r\nMeta address  : {remoteIP}:{remotePort}\r\n3D resolution : {viewportWidth}x{viewportHeight}\r\nCpu affinity  : {processorAffinity}\r\n\r\n");
+            Console.Write($"Game filename  : {gamePath}\r\nMeta address   : {remoteIP}:{remotePort}\r\nGame resolution: {viewportWidth}x{viewportHeight}\r\nCpu affinity   : {processorAffinity}\r\n\r\n");
 
         tryLaunchClient:
 

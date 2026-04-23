@@ -15,6 +15,11 @@ namespace SfcOpServer
     {
         private void LoadShiplist()
         {
+            SortedDictionary<string, object> d = new(StringComparer.OrdinalIgnoreCase);
+            string t;
+            string[] a;
+            int i, j, k;
+
             // reads the shiplist
 
             string path = _root + "Assets/Specs/shiplist.txt";
@@ -22,18 +27,16 @@ namespace SfcOpServer
             if (!File.Exists(path))
                 throw new FileNotFoundException(path);
 
-            SortedDictionary<string, object> d = new(StringComparer.OrdinalIgnoreCase);
-
             StreamReader r = new(path, Encoding.ASCII);
 
             while (!r.EndOfStream)
             {
-                string t = r.ReadLine();
+                t = r.ReadLine();
 
                 if (t.Length == 0 || t.StartsWith('\t') || t.StartsWith("Race", StringComparison.Ordinal))
                     continue;
 
-                string[] a = t.Split('\t', StringSplitOptions.None);
+                a = t.Split('\t', StringSplitOptions.None);
 
                 ShipData data = new()
                 {
@@ -120,7 +123,7 @@ namespace SfcOpServer
                     Balance = GetInteger(a[152])
                 };
 
-                for (int i = 0, j = 26; i < 25; i++, j += 3)
+                for (i = 0, j = 26; i < 25; i++, j += 3)
                 {
                     data.Weapons[i].Num = GetInteger(a[j]);
                     data.Weapons[i].Type = (WeaponTypes)(GetIndex(a[j + 1], _weaponTypes, StringComparison.OrdinalIgnoreCase, false) - 1);
@@ -158,6 +161,12 @@ namespace SfcOpServer
                 if (data.Shield1 + (data.Shield2And6 + data.Shield3And5 << 1) + data.Shield4 != data.ShieldTotal)
                     ThrowError(data, "Shield 1\\2_6\\3_5\\4\\Total");
 
+                if (!IsGeometryValid(data.Geometry))
+                    ThrowError(data, "Geometry");
+
+                if (data.UI.Length == 0)
+                    ThrowError(data, "UI");
+
                 // adds the data sorted by <Race>, <ClassType>, <BPV> and <ClassName>
 
                 t = ((int)data.Race).ToString("D2", CultureInfo.InvariantCulture) +
@@ -194,12 +203,12 @@ namespace SfcOpServer
 
             while (!r.EndOfStream)
             {
-                string t = r.ReadLine();
+                t = r.ReadLine();
 
                 if (t.Length == 0 || t.StartsWith('\t') || t.StartsWith("Race", StringComparison.Ordinal))
                     continue;
 
-                string[] a = t.Split('\t', StringSplitOptions.None);
+                a = t.Split('\t', StringSplitOptions.None);
 
                 FighterData data = new()
                 {
@@ -223,7 +232,7 @@ namespace SfcOpServer
                     Geometry = a[34]
                 };
 
-                for (int i = 0, j = 3; i < 5; i++, j += 4)
+                for (i = 0, j = 3; i < 5; i++, j += 4)
                 {
                     data.Weapons[i].Num = GetInteger(a[j]);
                     data.Weapons[i].Type = (WeaponTypes)(GetIndex(a[j + 1], _weaponTypes, StringComparison.OrdinalIgnoreCase, false) - 1);
@@ -248,6 +257,9 @@ namespace SfcOpServer
 
                 if (data.UI.Length == 0)
                     ThrowError(data, "UI");
+
+                if (!IsGeometryValid(data.Geometry))
+                    ThrowError(data, "Geometry");
 
                 // sorts the fighters by <Race>, the <BPV> reversed and <HullType>
 
@@ -299,7 +311,7 @@ namespace SfcOpServer
 
             // ... calculates the average bpv of each class
 
-            for (int i = 0; i < (int)ClassTypes.kMaxClasses; i++)
+            for (i = 0; i < (int)ClassTypes.kMaxClasses; i++)
             {
                 if (totalElements[i] > 0)
                     _classAverageBpv[i] = Math.Round((double)totalBpv[i] / totalElements[i], 2, MidpointRounding.AwayFromZero);
@@ -309,7 +321,7 @@ namespace SfcOpServer
 
             // ... calculates the cost ratio of each class
 
-            for (int i = (int)ClassTypes.kClassFreighter; i < (int)ClassTypes.kMaxClasses; i++)
+            for (i = (int)ClassTypes.kClassFreighter; i < (int)ClassTypes.kMaxClasses; i++)
             {
                 if (_classAverageBpv[i] > 0.0)
                     _classCostRatio[i] = Math.Round(_classCostRatio[i] * _costShuttles / _classAverageBpv[i], 2, MidpointRounding.AwayFromZero);
@@ -356,6 +368,17 @@ namespace SfcOpServer
             throw new NotSupportedException();
         }
 
+        private static int GetInteger(string t)
+        {
+            if (t.Length == 0)
+                return 0;
+
+            if (int.TryParse(t, NumberStyles.Integer, CultureInfo.InvariantCulture, out int result))
+                return result;
+
+            throw new NotSupportedException();
+        }
+
         private static float GetFloat(string t)
         {
             if (t.Length == 0)
@@ -367,15 +390,45 @@ namespace SfcOpServer
             throw new NotSupportedException();
         }
 
-        private static int GetInteger(string t)
+        private bool IsGeometryValid(string t)
         {
             if (t.Length == 0)
-                return 0;
+                return false;
 
-            if (int.TryParse(t, NumberStyles.Integer, CultureInfo.InvariantCulture, out int result))
-                return result;
+            t = Utils.LowerCasePath(t);
 
-            throw new NotSupportedException();
+            if (t.EndsWith(".mod", StringComparison.Ordinal))
+            {
+                t = $"{_root}{t}";
+
+                return File.Exists(t);
+            }
+
+            // ./a/1
+
+            int i = t.LastIndexOf('/');
+
+            if (i < 3 || i > t.Length - 2 || !int.TryParse(t[(i + 1)..], out int j) || j <= 0)
+                return false;
+
+            int k = t.LastIndexOf('/', i - 1);
+
+            if (k <= 0)
+                return false;
+
+            t = $"{_root}{t[..i]}{t[k..i]}";
+
+            while (j > 0)
+            {
+                string p = $"{t}{j}.mod";
+
+                if (!File.Exists(p))
+                    return false;
+
+                j--;
+            }
+
+            return true;
         }
 
         private static void WriteShipData(BinaryWriter w, int value)
@@ -618,38 +671,6 @@ namespace SfcOpServer
             }
         }
 
-        private bool GetShipData(Races race, ClassTypes minClassType, ClassTypes maxClassType, int minBPV, int maxBPV, int yearAvailable, out ShipData shipData)
-        {
-            List<ShipData> list = [];
-
-            foreach (KeyValuePair<string, ShipData> p in _shiplist)
-            {
-                ShipData data = p.Value;
-
-                if (
-                    data.Race == race &&
-                    data.ClassType >= minClassType && data.ClassType <= maxClassType &&
-                    data.BPV >= minBPV && data.BPV <= maxBPV &&
-                    (data.SpecialRole & SpecialRoles.Ignored) == 0 &&
-                    data.YearFirstAvailable <= yearAvailable && data.YearLastAvailable >= yearAvailable
-                )
-                    list.Add(data);
-            }
-
-            int c = list.Count;
-
-            if (c > 0)
-            {
-                shipData = list[_rand.NextInt32(c)];
-
-                return true;
-            }
-
-            shipData = null;
-
-            return false;
-        }
-
         private void CopyShipData(ShipData data, out Ship ship)
         {
             Rent(2048, out byte[] b, out MemoryStream m, out BinaryWriter w, out BinaryReader r);
@@ -810,6 +831,38 @@ namespace SfcOpServer
             // ----------------------------------------------------------------------------------------------------------------------------------------------------
 
             Return(b, m, w, r);
+        }
+
+        private bool GetShipData(Races race, ClassTypes minClassType, ClassTypes maxClassType, int minBPV, int maxBPV, int yearAvailable, out ShipData shipData)
+        {
+            List<ShipData> list = [];
+
+            foreach (KeyValuePair<string, ShipData> p in _shiplist)
+            {
+                ShipData data = p.Value;
+
+                if (
+                    data.Race == race &&
+                    data.ClassType >= minClassType && data.ClassType <= maxClassType &&
+                    data.BPV >= minBPV && data.BPV <= maxBPV &&
+                    (data.SpecialRole & SpecialRoles.Ignored) == 0 &&
+                    data.YearFirstAvailable <= yearAvailable && data.YearLastAvailable >= yearAvailable
+                )
+                    list.Add(data);
+            }
+
+            int c = list.Count;
+
+            if (c > 0)
+            {
+                shipData = list[_rand.NextInt32(c)];
+
+                return true;
+            }
+
+            shipData = null;
+
+            return false;
         }
     }
 }
