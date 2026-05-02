@@ -46,7 +46,7 @@ namespace SfcOpClient
                     ShowError("'SfcOpClient.gf' is invalid.");
                 else
                 {
-                    ShowError("'SfcOpClient.gf' was missing!\r\nCreating the file...");
+                    ShowError("'SfcOpClient.gf' was not found!\r\nCreating a new file...");
                     CreateCfg(t);
                 }
 
@@ -77,7 +77,7 @@ namespace SfcOpClient
 
             if (UpdateSetupFiles(directoryName, fileName) != 0)
             {
-                ShowError("One of the setup files was missing!\r\nCreating new files...");
+                ShowError("One of the setup files was not found!\r\nCreating new files...");
 
                 goto somethingWentWrong;
             }

@@ -62,7 +62,6 @@ namespace SfcOpServer
         // private static variables
 
         private static readonly clsPcg _rand;
-
         private static readonly Dictionary<string, string> _icons; // "planet", "8"
 
         private static readonly bool[] _isObject;
@@ -169,7 +168,6 @@ namespace SfcOpServer
             int i;
 
             _rand = new();
-
             _icons = [];
 
             for (i = 0; i < (int)MapObjectTypes.kMaxObjects; i++)
@@ -207,7 +205,7 @@ namespace SfcOpServer
 
         public MapTemplate(string filename)
         {
-            filename = Utils.LowerCasePath(filename);
+            filename = Utils.NormalizePath(filename);
 
             if (TryLoadTemplate(filename, out int width, out int height, out byte[][] map))
             {

@@ -18,7 +18,7 @@ namespace SfcOpServer
             SortedDictionary<string, object> d = new(StringComparer.OrdinalIgnoreCase);
             string t;
             string[] a;
-            int i, j, k;
+            int i, j;
 
             // reads the shiplist
 
@@ -395,7 +395,7 @@ namespace SfcOpServer
             if (t.Length == 0)
                 return false;
 
-            t = Utils.LowerCasePath(t);
+            t = Utils.NormalizePath(t);
 
             if (t.EndsWith(".mod", StringComparison.Ordinal))
             {

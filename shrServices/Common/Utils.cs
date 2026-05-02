@@ -19,7 +19,7 @@ namespace shrServices
 
         // path functions
 
-        public static string LowerCasePath(string directoryOrFilename)
+        public static string NormalizePath(string directoryOrFilename)
         {
             if (directoryOrFilename.Contains('\\'))
                 directoryOrFilename = directoryOrFilename.Replace('\\', '/');
