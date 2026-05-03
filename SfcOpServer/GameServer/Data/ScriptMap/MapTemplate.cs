@@ -1,41 +1,73 @@
-﻿#pragma warning disable IDE0130
+﻿#pragma warning disable IDE0057, IDE0130
 
 using shrGF;
 using shrPcg;
 using shrServices;
 
 using System;
-using System.Buffers;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using System.Globalization;
 using System.IO;
 using System.Numerics;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace SfcOpServer
 {
     public sealed class MapTemplate
     {
-        public const string SubPath = "d4v1ks/sfcopserver/templates";
+        private enum Entities
+        {
+            Planets,
+            Bases,
+            Specials,
+            Allied,
+            Enemy,
+            Neutral,
 
-        private const string freeChar = ".";
-        private const string emptyChar = " ";
-        private const string nebulaChar = "?";
-        private const string sunChar = "!";
-        private const string planetChar = "+";
-        private const string baseChar = "-";
-        private const string specialChar = "'";
+            Total
+        }
 
-        private const string objectChars =
-            "1234567890" + // neutral planets (PL1 -> PL10)
-            "%" +          // worm hole
-            "$" +          // fissure
-            "~";           // pulsar
+        private readonly struct Info
+        {
+            public readonly int X1;
+            public readonly int Y1;
 
-        private const string alliedChars = "abcdefghijklmnopqrst"; // allied starting positions
-        private const string enemyChars = "ABCDEFGHIJKLMNOPQRST";  // enemy starting positions (including bases and planets)
+            public readonly int X2;
+            public readonly int Y2;
+
+            public bool ContainsStart => X1 >= 0 && Y1 >= 0;
+            public bool ContainsEnd => X2 >= 0 && Y2 >= 0;
+
+            public Info()
+            {
+                X1 = -1;
+                Y1 = -1;
+
+                X2 = -1;
+                Y2 = -1;
+            }
+
+            public Info(int x1, int y1)
+            {
+                X1 = x1;
+                Y1 = y1;
+
+                X2 = -1;
+                Y2 = -1;
+            }
+
+            public Info(int x1, int y1, int x2, int y2)
+            {
+                X1 = x1;
+                Y1 = y1;
+
+                X2 = x2;
+                Y2 = y2;
+            }
+        }
 
         /*
             Shared.h
@@ -56,18 +88,37 @@ namespace SfcOpServer
             | 8 |   |   | NULL
         */
 
-        private const int txtMinSize = 3;
-        private const int txtMaxSize = 254;
+        public const string SubPath = "d4v1ks/sfcopserver/templates";
+
+        // ... object chars
+
+        private const char objectChar0 = '0';
+        private const char objectChar1 = '9';
+
+        private const char wormChar = '%';
+        private const char fissureChar = '$';
+        private const char pulsarChar = '~';
+
+        // ... valid chars
+
+        private const char startChar0 = 'G';
+        private const char startChar1 = 'Z';
+
+        private const char endChar0 = 'g';
+        private const char endChar1 = 'z';
+
+        private const char emptyChar = ' ';
+        private const char freeChar = '.';
+        private const char nebulaChar = '?';
+        private const char sunChar = '!';
 
         // private static variables
 
         private static readonly clsPcg _rand;
         private static readonly Dictionary<string, string> _icons; // "planet", "8"
 
-        private static readonly bool[] _isObject;
-        private static readonly bool[] _canBeCleared;
-        private static readonly bool[] _canBeAround;
-        private static readonly bool[] _isValid;
+        private static readonly byte[] _isObject;
+        private static readonly byte[] _isValid;
 
         private static readonly char[] _asteroids;
         private static readonly char[] _blackHoles;
@@ -82,118 +133,91 @@ namespace SfcOpServer
 
         public int Width => _width;
         public int Height => _height;
-
         public bool IsValid => _map != null;
-
-        // ... map overrides
 
         public string MapOverrides => _mapOverrides.ToString();
 
-        // ... customizations
-
         public string Background => _background;
         public List<string> Musics => _musics;
+
         public List<string> Planets => _planets;
         public List<string> Bases => _bases;
         public List<string> Specials => _specials;
 
         // private variables
 
-        private string _name;
+        private readonly string _name;
 
-        private int _width;
-        private int _height;
+        private readonly int _width;
+        private readonly int _height;
 
-        private char[][] _map;
+        private readonly Info _sunInfo;
+        private readonly Info _nebulaInfo;
+        private readonly List<Info> _freeInfo;
+        private readonly Dictionary<char, List<Info>> _objectInfo;
+        private readonly SortedDictionary<char, Info>[] _entityInfo;
 
-        private char[] _nextPosition;
+        private readonly Dictionary<char, string> _modelFilenames;
+        private readonly Dictionary<char, string> _tacticalMapIcons;
+        private readonly StringBuilder _mapOverrides;
 
-        // ... positions
+        private readonly string _background;
+        private readonly List<string> _musics;
 
-        private int _freeCount;
-        private int _sunCount;
-        private int _alliedCount;
-        private int _enemyCount;
-        private int _planetCount;
-        private int _baseCount;
-        private int _specialCount;
-        private int _objectCount;
+        private readonly List<string> _planets;
+        private readonly List<string> _bases;
+        private readonly List<string> _specials;
 
-        private uint[] _freePositions;
-        private uint[] _sunPositions;
-        private uint[] _alliedPositions;
-        private ulong[] _enemyPositions;
-        private ulong[] _planetPositions;
-        private uint[] _basePositions;
-        private uint[] _specialPositions;
-        private ulong[] _objectPositions;
+        private readonly PriorityQueue<Info, ulong> _freeQueue;
+        private readonly Queue<Info> _planetQueue;
+        private readonly Queue<Info> _baseQueue;
+        private readonly Queue<Info> _specialQueue;
+        private readonly Queue<Info> _alliedQueue;
+        private readonly Queue<Info> _enemyQueue;
+        private readonly Queue<Info> _neutralQueue;
 
-        // ... map overrides
-
-        private StringBuilder _mapOverrides;
-
-        private Dictionary<char, string> _modelFilenames;
-        private Dictionary<char, string> _tacticalMapIcons;
-
-        // ... points of interest
-
-        private string _background;
-        private List<string> _musics;
-        private List<string> _planets;
-        private List<string> _bases;
-        private List<string> _specials;
+        private readonly char[][] _map;
+        private char _position;
 
         static MapTemplate()
         {
-            Contract.Assert(SubPath.Equals(SubPath.ToLowerInvariant(), StringComparison.Ordinal)); // TrySortTemplate()
-
-            const string canBeClearedChars =
-                freeChar +
-                planetChar +
-                baseChar +
-                specialChar;
-
-            const string canBeAroundChars =
-                emptyChar +
-                nebulaChar +
-                alliedChars +
-                enemyChars;
-
-            const string validChars =
-                sunChar +
-                objectChars +
-                canBeClearedChars +
-                canBeAroundChars;
-
-            int i;
+            Contract.Assert(SubPath.Equals(Utils.NormalizePath(SubPath), StringComparison.Ordinal));
 
             _rand = new();
-            _icons = [];
+
+            Dictionary<string, string> icons = _icons = new(StringComparer.OrdinalIgnoreCase);
+            int i;
 
             for (i = 0; i < (int)MapObjectTypes.kMaxObjects; i++)
-            {
-                string k = Enum.GetName(typeof(MapObjectTypes), (MapObjectTypes)i)[7..].ToLowerInvariant();
-                string v = $"{i}";
+                icons.Add(Enum.GetName(typeof(MapObjectTypes), (MapObjectTypes)i).Substring(7), i.ToString(CultureInfo.InvariantCulture));
 
-                _icons.Add(k, v);
-            }
+            // ... object chars
 
-            _isObject = new bool[256];
-            _canBeCleared = new bool[256];
-            _canBeAround = new bool[256];
-            _isValid = new bool[256];
+            _isObject = new byte[256];
 
-            for (i = 0; i < objectChars.Length; i++)
-                _isObject[objectChars[i]] = true;
+            for (i = objectChar0; i <= objectChar1; i++)
+                _isObject[i] = 1;
 
-            for (i = 0; i < canBeClearedChars.Length; i++)
-                _canBeCleared[canBeClearedChars[i]] = true;
+            _isObject[wormChar] = 1;
+            _isObject[fissureChar] = 1;
+            _isObject[pulsarChar] = 1;
 
-            for (i = 0; i < canBeAroundChars.Length; i++)
-                _canBeAround[canBeAroundChars[i]] = true;
+            // ... valid chars
 
-            for (i = 0; i < validChars.Length; i++)
-                _isValid[validChars[i]] = true;
+            _isValid = new byte[256];
+
+            Unsafe.CopyBlock(ref MemoryMarshal.GetArrayDataReference(_isValid), ref MemoryMarshal.GetArrayDataReference(_isObject), 256u);
+
+            for (i = startChar0; i <= startChar1; i++)
+                _isValid[i] = 1;
+
+            for (i = endChar0; i <= endChar1; i++)
+                _isValid[i] = 1;
+
+            _isValid[emptyChar] = 1;
+            _isValid[freeChar] = 1;
+            _isValid[nebulaChar] = 1;
+            _isValid[sunChar] = 1;
 
             _asteroids = ['[', ']', '*', 'a', 'A'];
             _blackHoles = [':', ',', 'b', 'B'];
@@ -205,44 +229,368 @@ namespace SfcOpServer
 
         public MapTemplate(string filename)
         {
-            filename = Utils.NormalizePath(filename);
-
-            if (TryLoadTemplate(filename, out int width, out int height, out byte[][] map))
+            try
             {
-                if (TrySortTemplate(filename, width, height, map))
-                    return;
+                // tries to read the file
+
+                filename = Utils.NormalizePath(filename);
+
+                byte[] b = File.ReadAllBytes(filename);
+
+                // tries to find the header
+
+                ReadOnlySpan<byte> s = new(b);
+                int i = s.IndexOf("[Objects]\r\n"u8);
+
+                if (i == -1)
+                    throw new NotSupportedException("The file doesn't contain any [Objects]!");
+
+                s = s.Slice(i + 11);
+
+                // tries to get the width
+
+                const int minSize = 3;
+                const int maxSize = 254;
+
+                int width = s.IndexOf("\r\n"u8);
+
+                if (width < minSize || width > maxSize)
+                    throw new NotSupportedException($"The lines must have between {minSize} to {maxSize} chars");
+
+                // tries to get the height
+
+                int height = s.Length / (width + 2);
+
+                if (height < minSize || height > maxSize)
+                    throw new NotSupportedException($"The template must have between {minSize} to {maxSize} lines");
+
+                // initializes the template
+
+                _name = Path.GetFileNameWithoutExtension(filename);
+
+                _width = width;
+                _height = height;
+
+                _sunInfo = new();
+                _nebulaInfo = new();
+                _freeInfo = [];
+                _objectInfo = [];
+                _entityInfo = new SortedDictionary<char, Info>[(int)Entities.Total];
+
+                for (i = 0; i < (int)Entities.Total; i++)
+                    _entityInfo[i] = [];
+
+                _modelFilenames = [];
+                _tacticalMapIcons = [];
+                _mapOverrides = new(1024);
+
+                Contract.Assert(_background == null);
+
+                _musics = [];
+
+                _planets = [];
+                _bases = [];
+                _specials = [];
+
+                _freeQueue = new();
+                _planetQueue = new();
+                _baseQueue = new();
+                _specialQueue = new();
+                _alliedQueue = new();
+                _enemyQueue = new();
+                _neutralQueue = new();
+
+                _map = new char[height][];
+
+                for (i = 0; i < height; i++)
+                    _map[i] = new char[width];
+
+                Contract.Assert(_position == char.MinValue);
+
+                // tries to get the settings
+
+                GFFile ini = new();
+
+                if (!ini.Load(filename))
+                    throw new FileNotFoundException();
+
+                // tries to get the type of the entities
+
+                Dictionary<char, int> e = [];
+
+                char c;
+                string key, value;
+                bool quotes;
+
+                for (c = startChar0; c <= startChar1; c++)
+                {
+                    key = c.ToString();
+
+                    if (ini.ContainsKey("Planets", key))
+                        e.Add(c, (int)Entities.Planets);
+                    else if (ini.ContainsKey("Bases", key))
+                        e.Add(c, (int)Entities.Bases);
+                    else if (ini.ContainsKey("Specials", key))
+                        e.Add(c, (int)Entities.Specials);
+                    else if (ini.TryGetValue("Ships", key, out value, out quotes))
+                    {
+                        if (value.StartsWith("A", StringComparison.OrdinalIgnoreCase))
+                            e.Add(c, (int)Entities.Allied);
+                        else if (value.StartsWith("E", StringComparison.OrdinalIgnoreCase))
+                            e.Add(c, (int)Entities.Enemy);
+                        else if (value.StartsWith("N", StringComparison.OrdinalIgnoreCase))
+                            e.Add(c, (int)Entities.Neutral);
+                    }
+                }
+
+                // tries to parse the map
+
+                Unsafe.SkipInit(out Info info);
+
+                for (int y = 0; y < height; y++)
+                {
+                    for (int x = 0; x < width; x++)
+                    {
+                        c = (char)s[x];
+
+                        if (c == sunChar)
+                        {
+                            if (!_sunInfo.ContainsStart && x == 0)
+                            {
+                                _sunInfo = new(x, y);
+
+                                continue;
+                            }
+                        }
+                        else if (c == nebulaChar)
+                        {
+                            if (!_nebulaInfo.ContainsStart && x == 1 && y == 1)
+                            {
+                                _nebulaInfo = new(x, y);
+
+                                continue;
+                            }
+                        }
+                        else if (c == freeChar)
+                        {
+                            _freeInfo.Add(new(x, y));
+
+                            continue;
+                        }
+                        else if (c == emptyChar)
+                        {
+                            continue;
+                        }
+                        else if (_isObject[c] != 0)
+                        {
+                            if (!_objectInfo.TryGetValue(c, out List<Info> list))
+                            {
+                                list = [];
+                                _objectInfo.Add(c, list);
+                            }
+
+                            list.Add(new(x, y));
+
+                            continue;
+                        }
+                        else if (c >= endChar0 && c <= endChar1)
+                        {
+                            c = char.ToUpper(c);
+
+                            if (e.TryGetValue(c, out i))
+                            {
+                                if (!_entityInfo[i].TryGetValue(c, out info))
+                                {
+                                    _entityInfo[i].Add(c, new(-1, -1, x, y));
+
+                                    continue;
+                                }
+
+                                if (!info.ContainsEnd)
+                                {
+                                    _entityInfo[i][c] = new(info.X1, info.Y1, x, y);
+
+                                    continue;
+                                }
+                            }
+                        }
+                        else if (c >= startChar0 && c <= startChar1)
+                        {
+                            if (e.TryGetValue(c, out i))
+                            {
+                                if (!_entityInfo[i].TryGetValue(c, out info))
+                                {
+                                    _entityInfo[i].Add(c, new(x, y, -1, -1));
+
+                                    continue;
+                                }
+
+                                if (!info.ContainsStart)
+                                {
+                                    _entityInfo[i][c] = new(x, y, info.X2, info.Y2);
+
+                                    continue;
+                                }
+                            }
+                        }
+
+                        throw new NotSupportedException($"Invalid char at {x}, {y}");
+                    }
+
+                    s = s.Slice(width + 2);
+
+                    if (s.Length == 0)
+                        break;
+
+                    if (s[width] == 13 && s[width + 1] == 10)
+                        continue;
+
+                    throw new NotSupportedException("All lines must have the same width");
+                }
+
+                // checks the sun and nebula positions
+
+                if (!_sunInfo.ContainsStart)
+                    throw new NotSupportedException($"You don't have a '{sunChar}' at the left side (0, y)");
+
+                if (!_nebulaInfo.ContainsStart)
+                    throw new NotSupportedException($"You don't have a '{nebulaChar}' at 1, 1");
+
+                // checks if we have at least one starting position
+
+                if (_entityInfo[(int)Entities.Allied].Count == 0)
+                    throw new NotSupportedException("You don't have a starting position");
+
+                // checks the entity vectors
+
+                void CheckVector(SortedDictionary<char, Info> entities)
+                {
+                    foreach (var p in entities)
+                    {
+                        if (!p.Value.ContainsStart || !p.Value.ContainsEnd)
+                            throw new NotSupportedException($"'{p.Key}' needs to have a start and end position");
+                    }
+                }
+
+                CheckVector(_entityInfo[(int)Entities.Planets]);
+
+                CheckVector(_entityInfo[(int)Entities.Allied]);
+                CheckVector(_entityInfo[(int)Entities.Enemy]);
+                CheckVector(_entityInfo[(int)Entities.Neutral]);
+
+                // checks the entity positions
+
+                void CheckPosition(SortedDictionary<char, Info> entities)
+                {
+                    foreach (var p in entities)
+                    {
+                        if (!p.Value.ContainsStart || p.Value.ContainsEnd)
+                            throw new NotSupportedException($"'{p.Key}' only needs a start position");
+                    }
+                }
+
+                CheckPosition(_entityInfo[(int)Entities.Bases]);
+                CheckPosition(_entityInfo[(int)Entities.Specials]);
+
+                // initializes the remaining variables
+
+                for (c = '0'; c <= '9'; c++)
+                {
+                    if (_objectInfo.ContainsKey(c))
+                    {
+                        key = $"{(i - 38) % 10}";
+
+                        if (ini.TryGetValue("Objects/Names", key, out value, out _))
+                            _modelFilenames.Add(c, value);
+
+                        key = $"{c}";
+
+                        if (ini.TryGetValue("Objects/Icons", key, out value, out quotes))
+                        {
+                            key = value.Replace(" ", string.Empty).ToLowerInvariant();
+
+                            if (
+                                _icons.TryGetValue(key, out value) ||
+                                (int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out int j) && j >= 0 && j < (int)MapObjectTypes.kMaxObjects)
+                            )
+                                _tacticalMapIcons.Add(c, value);
+                        }
+                    }
+                }
+
+                if (ini.TryGetValue(string.Empty, "Background", out value, out _))
+                {
+                    value = value.ToLowerInvariant();
+
+                    if (!value.EndsWith(".mod", StringComparison.OrdinalIgnoreCase))
+                        value += ".mod";
+
+                    key = filename[..filename.IndexOf($"/{SubPath}/")] + "/assets/models/space/" + value;
+
+                    if (File.Exists(key))
+                        _background = value;
+                }
+
+                for (i = 0; ini.TryGetValue("Musics", i.ToString(CultureInfo.InvariantCulture), out value, out _); i++)
+                    _musics.Add(value);
+
+                for (i = 0; ini.TryGetValue("POI/Planets", i.ToString(CultureInfo.InvariantCulture), out value, out _); i++)
+                    _planets.Add(value);
+
+                for (i = 0; ini.TryGetValue("POI/Bases", i.ToString(CultureInfo.InvariantCulture), out value, out _); i++)
+                    _bases.Add(value);
+
+                for (i = 0; ini.TryGetValue("POI/Specials", i.ToString(CultureInfo.InvariantCulture), out value, out _); i++)
+                    _specials.Add(value);
+
+                // checks if we have enough positions to allocate all the assets
+
+                const string notEnough = "Not enough positions to allocate all ";
+
+                if (_planets.Count > _entityInfo[(int)Entities.Planets].Count)
+                    throw new NotSupportedException($"{notEnough}[planets]");
+
+                if (_bases.Count > _entityInfo[(int)Entities.Bases].Count)
+                    throw new NotSupportedException($"{notEnough}[bases]");
+
+                if (_specials.Count > _entityInfo[(int)Entities.Specials].Count)
+                    throw new NotSupportedException($"{notEnough}[specials]");
             }
+            catch (Exception)
+            {
+                _name = null;
 
-            _name = null;
+                _width = 0;
+                _height = 0;
 
-            _width = 0;
-            _height = 0;
+                _sunInfo = new();
+                _nebulaInfo = new();
+                _freeInfo = null;
+                _objectInfo = null;
+                _entityInfo = null;
 
-            _map = null;
+                _modelFilenames = null;
+                _tacticalMapIcons = null;
+                _mapOverrides = null;
 
-            _nextPosition = null;
+                _background = null;
+                _musics = null;
 
-            ClearIndexes();
+                _planets = null;
+                _bases = null;
+                _specials = null;
 
-            _freePositions = null;
-            _sunPositions = null;
-            _alliedPositions = null;
-            _enemyPositions = null;
-            _planetPositions = null;
-            _basePositions = null;
-            _specialPositions = null;
-            _objectPositions = null;
+                _freeQueue = null;
+                _planetQueue = null;
+                _baseQueue = null;
+                _specialQueue = null;
+                _alliedQueue = null;
+                _enemyQueue = null;
+                _neutralQueue = null;
 
-            _mapOverrides = null;
-
-            _modelFilenames = null;
-            _tacticalMapIcons = null;
-
-            _background = null;
-            _musics = null;
-            _planets = null;
-            _bases = null;
-            _specials = null;
+                _map = null;
+                _position = char.MinValue;
+            }
         }
 
         public static void LockRnd(ulong value)
@@ -267,72 +615,88 @@ namespace SfcOpServer
             if (i >= 9 && i <= 11)
                 throw new NotSupportedException();
 
-            // makes a copy of the terrain we want to use
+            // makes a copy of the terrain
 
             TerrainContent content = terrains[i];
 
-            // checks if we need to sort the free positions back to their original state
-            // obviously we need to do this before clearing the indexes  :>
+            // initializes the queues
 
-            if (_freeCount != 0)
-                Array.Sort(_freePositions);
+            Populate(_freeQueue, _freeInfo);
 
-            // clears the variables we want to use
+            Populate(_planetQueue, _entityInfo[(int)Entities.Planets]);
+            Populate(_baseQueue, _entityInfo[(int)Entities.Bases]);
+            Populate(_specialQueue, _entityInfo[(int)Entities.Specials]);
+            Populate(_alliedQueue, _entityInfo[(int)Entities.Allied]);
+            Populate(_enemyQueue, _entityInfo[(int)Entities.Enemy]);
+            Populate(_neutralQueue, _entityInfo[(int)Entities.Neutral]);
 
-            ClearMap();
-            ClearIndexes();
+            // clears the map
+
+            for (i = 0; i < _height; i++)
+                Array.Fill(_map[i], '.');
+
+            _position = 'G';
 
             // populates the template with the current terrain content
             // (apparently the client can only display 74 icons at once in the minimap so we should be careful when setting it. it includes the ships, planets and suns)
 
-            if (_freePositions.Length != 0)
+            const int maxIcons = 40;
+
+            i = _freeInfo.Count;
+
+            if (i > 0)
             {
-                double ratio = _freePositions.Length;
+                double ratio = Math.Min(maxIcons, i);
 
                 content.Asteroids *= ratio;
                 content.DustClouds *= ratio;
                 content.IonStorms *= ratio;
 
-                PopulateFreePositionsWith(_asteroids, (int)Math.Truncate(content.Asteroids));
-                PopulateFreePositionsWith(_dustClouds, (int)Math.Truncate(content.DustClouds));
-                PopulateFreePositionsWith(_ionStorms, (int)Math.Truncate(content.IonStorms));
+                for (i = (int)Math.Truncate(content.Asteroids); i > 0 && _freeQueue.Count > 0; i--)
+                    Populate(_freeQueue.Dequeue(), _asteroids);
 
-                PopulateFreePositionsWith(_blackHoles, content.BlackHoles);
+                for (i = (int)Math.Truncate(content.DustClouds); i > 0 && _freeQueue.Count > 0; i--)
+                    Populate(_freeQueue.Dequeue(), _dustClouds);
+
+                for (i = (int)Math.Truncate(content.IonStorms); i > 0 && _freeQueue.Count > 0; i--)
+                    Populate(_freeQueue.Dequeue(), _ionStorms);
+
+                for (i = content.BlackHoles; i > 0 && _freeQueue.Count > 0; i--)
+                    Populate(_freeQueue.Dequeue(), _blackHoles);
             }
-
-            // nebula
 
             if (content.Nebulas)
-            {
-                Contract.Assert(_map[1][1] == '.');
+                Populate(_nebulaInfo, _nebulas);
 
-                _map[1][1] = _nebulas[_rand.NextInt32(_nebulas.Length)];
-            }
+            Populate(_sunInfo, _suns);
 
-            // sun
-
-            if (content.Sun && _sunPositions.Length != 0)
-                PopulateSpecificPositionWith(ref _sunCount, _sunPositions, _suns[_rand.NextInt32(_suns.Length)]);
-
-            // objects
+            // objects and overrides
 
             _mapOverrides.Clear();
 
-            for (i = 0; i < _objectPositions.Length; i++)
+            foreach (var p in _objectInfo)
             {
-                GetCoordinates(_objectPositions[_objectCount], out int x1, out int y1, out int x2, out _);
+                char c = p.Key;
 
-                _objectCount++;
+                foreach (Info info in p.Value)
+                {
+                    Contract.Assert(_map[info.Y1][info.X1] == freeChar);
 
-                Contract.Assert(_map[y1][x1] == freeChar[0]);
+                    _map[info.Y1][info.X1] = c;
+                }
 
-                char c = (char)x2;
+                // ... icon override
 
-                _map[y1][x1] = c;
+                if (_tacticalMapIcons.TryGetValue(c, out string v))
+                {
+                    _mapOverrides.Append(c);
+                    _mapOverrides.Append(" = ");
+                    _mapOverrides.AppendLine(v);
+                }
 
                 // ... model override
 
-                if (_modelFilenames.TryGetValue(c, out string value))
+                if (_modelFilenames.TryGetValue(c, out v))
                 {
                     _mapOverrides.Append("PL");
 
@@ -341,815 +705,106 @@ namespace SfcOpServer
 
                     _mapOverrides.Append(c);
                     _mapOverrides.Append(" = ");
-                    _mapOverrides.AppendLine(value);
+                    _mapOverrides.AppendLine(v);
                 }
-
-                // ... icon override
-
-                TryAppendMapOverride(c);
             }
-
-            if (_objectCount != _objectPositions.Length)
-                throw new NotSupportedException();
-        }
-
-        public void AddAlliedShip()
-        {
-            PopulateSpecificPositionWith(ref _alliedCount, _alliedPositions, GetAndAdvancePosition());
-        }
-
-        public void AddEnemyShip()
-        {
-            PopulateSpecificPositionWith(ref _enemyCount, _enemyPositions, GetAndAdvancePosition());
-        }
-
-        public void AddNeutralShip()
-        {
-            PopulateFreePositionsWith(_nextPosition, 1);
-            GetAndAdvancePosition();
         }
 
         public void AddPlanet()
         {
-            PopulateSpecificPositionWith(ref _planetCount, _planetPositions, GetAndAdvancePosition());
+            Populate2(_planetQueue);
         }
 
         public void AddBase()
         {
-            PopulateSpecificPositionWith(ref _baseCount, _basePositions, GetAndAdvancePosition());
+            Populate1(_baseQueue);
         }
 
         public void AddSpecial()
         {
-            PopulateSpecificPositionWith(ref _specialCount, _specialPositions, GetAndAdvancePosition());
+            Populate1(_specialQueue);
+        }
+
+        public void AddAlliedShip()
+        {
+            Populate2(_alliedQueue);
+        }
+
+        public void AddEnemyShip()
+        {
+            Populate2(_enemyQueue);
+        }
+
+        public void AddNeutralShip()
+        {
+            Populate2(_neutralQueue);
         }
 
         public ReadOnlySpan<char> GetLine(int index)
         {
-            if (index < 0 || index >= _height)
-                throw new NotSupportedException();
+            Contract.Assert(index >= 0 && index < _height);
 
             return new(_map[index]);
         }
 
-        private bool TryLoadTemplate(string filename, out int width, out int height, out byte[][] map)
+        private static void Populate(PriorityQueue<Info, ulong> destination, List<Info> source)
         {
-            FileStream file = null;
-            byte[] buffer = null;
+            destination.Clear();
 
-            try
-            {
-                file = new(filename, FileMode.Open, FileAccess.Read, FileShare.None);
-
-                int length = (int)file.Length;
-
-                if (length == 0)
-                    throw new NotSupportedException("the template can't be empty");
-
-                buffer = ArrayPool<byte>.Shared.Rent(length);
-
-                file.ReadExactly(buffer, 0, length);
-
-                ReadOnlySpan<byte> span = new(buffer, 0, length);
-
-                // looks for the [Objects] section
-
-                const string objectsHeader = "[Objects]";
-
-                int start = span.IndexOf("[Objects]"u8);
-
-                if (start == -1)
-                    throw new NotSupportedException($"The file doesn't contain any {objectsHeader}!");
-
-                start += objectsHeader.Length;
-
-                while (span[start] == 10 || span[start] == 13)
-                    start++;
-
-                span = span[start..];
-
-                // checks the width
-
-                width = 1;
-
-                while (width < span.Length && span[width] != 10 && span[width] != 13)
-                    width++;
-
-                if (width < txtMinSize || width > txtMaxSize)
-                    throw new NotSupportedException($"The lines must have between {txtMinSize} to {txtMaxSize} chars");
-
-                // tries to read all the lines
-
-                List<ReadOnlyMemory<byte>> lines = [];
-
-                int i = 0;
-                int j = width;
-
-                while (true)
-                {
-                    lines.Add(new ReadOnlyMemory<byte>(buffer, start + i, j - i));
-
-                    while (true)
-                    {
-                        if (j >= span.Length)
-                            goto tryGetHeight;
-
-                        if (span[j] != 10 && span[j] != 13)
-                            break;
-
-                        j++;
-                    }
-
-                    i = j;
-
-                    while (j < span.Length && span[j] != 10 && span[j] != 13)
-                        j++;
-
-                    if (j - i != width)
-                        throw new NotSupportedException("All lines must be the same size");
-                }
-
-            tryGetHeight:
-
-                height = lines.Count;
-
-                if (height < txtMinSize || height > txtMaxSize)
-                    throw new NotSupportedException($"The template must have between {txtMinSize} to {txtMaxSize} lines");
-
-                // initializes the map template
-
-                _name = Path.GetFileNameWithoutExtension(filename);
-
-                _width = width;
-                _height = height;
-
-                _map = new char[height][];
-
-                for (int y = 0; y < height; y++)
-                    _map[y] = new char[width];
-
-                _nextPosition = new char[1];
-
-                // ... creates the map
-
-                map = new byte[height][];
-
-                for (int y = 0; y < height; y++)
-                {
-                    map[y] = new byte[width];
-
-                    lines[y].CopyTo(new Memory<byte>(map[y], 0, width));
-
-                    // ... checks the current line
-
-                    for (int x = 0; x < width; x++)
-                    {
-                        if (!_isValid[map[y][x]])
-                            throw new NotSupportedException($"The char at {y}, {x} is invalid");
-                    }
-                }
-
-                // checks the nebula position
-
-                if (map[1][1] != (byte)nebulaChar[0])
-                    throw new NotSupportedException($"The char at 1, 1 must be a '{nebulaChar}'");
-
-                return true;
-            }
-            catch (Exception)
-            {
-                width = 0;
-                height = 0;
-
-                map = null;
-
-                return false;
-            }
-            finally
-            {
-                file?.Dispose();
-
-                if (buffer != null)
-                    ArrayPool<byte>.Shared.Return(buffer);
-            }
+            foreach (var value in source)
+                destination.Enqueue(value, _rand.NextUInt64());
         }
 
-        private bool TrySortTemplate(string filename, int width, int height, byte[][] map)
+        private static void Populate(Queue<Info> destination, SortedDictionary<char, Info> source)
         {
-            try
-            {
-                // sorts the content of the map template
+            destination.Clear();
 
-                uint sunPosition = uint.MaxValue;
-
-                SortedDictionary<int, uint> alliedPositions = [];
-                SortedDictionary<int, uint> enemyPositions = [];
-                SortedDictionary<int, uint> planetPositions = [];
-                SortedDictionary<int, uint> basesPositions = [];
-                SortedDictionary<int, uint> specialPositions = [];
-
-                Dictionary<int, uint> objectPositions = [];
-
-                for (int y = 0; y < height; y++)
-                {
-                    for (int x = 0; x < width; x++)
-                    {
-                        int c = map[y][x];
-                        uint k = (uint)((y << 16) | x);
-
-                        if (c == nebulaChar[0])
-                        {
-                            if (y != 1 || x != 1)
-                                throw new NotSupportedException();
-                        }
-                        else if (c == sunChar[0])
-                        {
-                            if (sunPosition != uint.MaxValue)
-                                throw new NotSupportedException();
-
-                            sunPosition = k;
-                        }
-                        else if (c >= alliedChars[0] && c <= alliedChars[^1])
-                        {
-                            if (alliedPositions.ContainsKey(c))
-                                throw new NotSupportedException();
-
-                            alliedPositions.Add(c, k);
-                        }
-                        else if (c >= enemyChars[0] && c <= enemyChars[^1])
-                        {
-                            if (enemyPositions.ContainsKey(c) || planetPositions.ContainsKey(c) || basesPositions.ContainsKey(c) || specialPositions.ContainsKey(c))
-                                throw new NotSupportedException();
-
-                            if (x < width - 1 && map[y][x + 1] == planetChar[0])
-                                planetPositions.Add(c, k);
-                            else if (x < width - 1 && map[y][x + 1] == baseChar[0])
-                                basesPositions.Add(c, k);
-                            else if (x < width - 1 && map[y][x + 1] == specialChar[0])
-                                specialPositions.Add(c, k);
-                            else
-                                enemyPositions.Add(c, k);
-                        }
-                        else if (_isObject[c])
-                            objectPositions.Add(c, k);
-                    }
-                }
-
-                // checks if we have any starting positions
-
-                if (alliedPositions.Count == 0)
-                    throw new NotSupportedException();
-
-                /*
-                    // clears the scenario around certain positions
-
-                    if (sunPosition != uint.MaxValue)
-                    {
-                        GetCoordinates(sunPosition, out int x, out int y);
-                        ClearPositions(map, x, y, 4);
-                    }
-
-                    ClearPositions(map, alliedPositions, 1);
-                    ClearPositions(map, enemyPositions, 1);
-                    ClearPositions(map, planetPositions, 3);
-                    ClearPositions(map, basesPositions, 2);
-                    ClearPositions(map, specialPositions, 1);
-                */
-
-                // sorts the free spaces
-
-                List<uint> freeSpaces = [];
-
-                for (int y = 0; y < height; y++)
-                {
-                    for (int x = 0; x < width; x++)
-                    {
-                        uint k = (uint)((y << 16) | x);
-
-                        if (map[y][x] == (byte)freeChar[0])
-                            freeSpaces.Add(k);
-                        else if (_canBeCleared[map[y][x]])
-                        {
-                            map[y][x] = (byte)freeChar[0];
-
-                            freeSpaces.Add(k);
-                        }
-                    }
-                }
-
-                // calculates all the planet end positions (aka their rotation)
-
-                Dictionary<int, uint> planetRotations = [];
-
-                if (planetPositions.Count != 0)
-                {
-                    foreach (KeyValuePair<int, uint> p in planetPositions)
-                    {
-                        GetCoordinates(p.Value, out double x1, out double y1);
-
-                        double x2, y2;
-
-                        if (sunPosition != uint.MaxValue)
-                            GetCoordinates(sunPosition, out x2, out y2);
-                        else
-                        {
-                            x2 = x1;
-                            y2 = y1 + 1;
-                        }
-
-                        double angle = NormalizeAngle(GetAngle(x1, y1, x2, y2) - (Math.Tau * 0.25)); // 90º
-
-                        int index = GetClosestIndex(freeSpaces, x1, y1, angle);
-
-#if DEBUG
-                        GetCoordinates(freeSpaces[index], out int x, out int y);
-
-                        map[y][x] = (byte)(p.Key + 32);
-#endif
-
-                        planetRotations.Add(p.Key, freeSpaces[index]);
-                        freeSpaces.RemoveAt(index);
-                    }
-                }
-
-                // calculates all the enemy end positions
-
-                Dictionary<int, uint> enemyEndPositions = [];
-
-                if (enemyPositions.Count != 0)
-                {
-                    foreach (KeyValuePair<int, uint> p in enemyPositions)
-                    {
-                        GetCoordinates(p.Value, out double x1, out double y1);
-
-                        double angle = Math.Tau * 0.25; // 90º
-
-                        int index = GetClosestIndex(freeSpaces, x1, y1, angle);
-
-#if DEBUG
-                        GetCoordinates(freeSpaces[index], out int x, out int y);
-
-                        map[y][x] = (byte)p.Key;
-#endif
-
-                        enemyEndPositions.Add(p.Key, freeSpaces[index]);
-                        freeSpaces.RemoveAt(index);
-                    }
-                }
-
-                // checks if all the planets are correctly aligned
-
-#if VERBOSE
-                StringBuilder s = new();
-
-                for (int y = 0; y < height; y++)
-                {
-                    for (int x = 0; x < width; x++)
-                        s.Append((char)map[y][x]);
-
-                    s.AppendLine();
-                }
-
-                s.AppendLine();
-
-                //Debug.Write(s.ToString());
-#endif
-
-                foreach (KeyValuePair<int, uint> p in planetPositions)
-                {
-                    GetCoordinates(p.Value, out double x1, out double y1);
-                    GetCoordinates(planetRotations[p.Key], out double x2, out double y2);
-
-                    double x3, y3;
-
-                    if (sunPosition != uint.MaxValue)
-                        GetCoordinates(sunPosition, out x3, out y3);
-                    else
-                    {
-                        x3 = x1;
-                        y3 = y1 + 1;
-                    }
-
-                    double bias = NormalizeAngle(GetAngle(x1, y1, x2, y2) - GetAngle(x1, y1, x3, y3));
-
-#if VERBOSE
-                    s.Append((char)p.Key);
-                    s.Append(" -> ");
-                    s.AppendLine(Math.Round(bias, 5, MidpointRounding.AwayFromZero).ToString());
-#endif
-
-                    const double expectation = 1.5708;
-
-                    Contract.Assert(bias >= expectation * 0.98 && bias <= expectation * 1.02);
-                }
-
-#if VERBOSE
-                Debug.WriteLine(s.ToString());
-#endif
-
-                // creates the final lists
-
-#pragma warning disable IDE0305
-                _freePositions = freeSpaces.ToArray();
-#pragma warning restore IDE0305
-
-                Array.Sort(_freePositions); // must be sorted for the process to be repeatable
-
-                if (sunPosition != uint.MaxValue)
-                    _sunPositions = [sunPosition];
-                else
-                    _sunPositions = [];
-
-                InitializePositions(alliedPositions, ref _alliedPositions);
-                InitializePositions(enemyPositions, enemyEndPositions, ref _enemyPositions);
-                InitializePositions(planetPositions, planetRotations, ref _planetPositions);
-                InitializePositions(basesPositions, ref _basePositions);
-                InitializePositions(specialPositions, ref _specialPositions);
-                InitializePositions(objectPositions, ref _objectPositions);
-
-                // map overrides
-
-                GFFile ini = new();
-
-                _mapOverrides = new(1024);
-
-                _tacticalMapIcons = [];
-                _modelFilenames = [];
-
-                Contract.Assert(_background == null);
-
-                _musics = [];
-                _planets = [];
-                _bases = [];
-                _specials = [];
-
-                if (ini.Load(filename))
-                {
-                    string key, value;
-
-                    for (char i = '0'; i <= '9'; i++)
-                    {
-                        if (objectPositions.ContainsKey(i))
-                        {
-                            key = $"{i}";
-
-                            if (ini.TryGetValue("Objects/Icons", key, out value, out _))
-                            {
-                                key = value.Replace(" ", string.Empty).ToLowerInvariant();
-
-                                if (
-                                    _icons.TryGetValue(key, out value) ||
-                                    (int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out int j) && j >= 0 && j < (int)MapObjectTypes.kMaxObjects)
-                                )
-                                    _tacticalMapIcons.Add(i, value);
-                            }
-
-                            key = $"{(i - 38) % 10}";
-
-                            if (ini.TryGetValue("Objects/Names", key, out value, out _))
-                                _modelFilenames.Add(i, value);
-                        }
-                    }
-
-                    if (ini.TryGetValue(string.Empty, "Background", out value, out _))
-                    {
-                        value = value.ToLowerInvariant();
-
-                        if (!value.EndsWith(".mod", StringComparison.OrdinalIgnoreCase))
-                            value += ".mod";
-
-                        key = filename[..filename.IndexOf($"/{SubPath}/")] + "/assets/models/space/" + value;
-
-                        if (File.Exists(key))
-                            _background = value;
-                    }
-
-                    for (int i = 0; ini.TryGetValue("Musics", i.ToString(CultureInfo.InvariantCulture), out value, out _); i++)
-                        _musics.Add(value);
-
-                    for (int i = 0; ini.TryGetValue("POI/Planets", i.ToString(CultureInfo.InvariantCulture), out value, out _); i++)
-                        _planets.Add(value);
-
-                    for (int i = 0; ini.TryGetValue("POI/Bases", i.ToString(CultureInfo.InvariantCulture), out value, out _); i++)
-                        _bases.Add(value);
-
-                    for (int i = 0; ini.TryGetValue("POI/Specials", i.ToString(CultureInfo.InvariantCulture), out value, out _); i++)
-                        _specials.Add(value);
-
-                    // checks if we have enough positions to allocate all the assets
-
-                    const string notEnough = "Not enough positions to allocate all ";
-
-                    if (_planets.Count > _planetPositions.Length)
-                        throw new NotSupportedException($"{notEnough}[planets]");
-
-                    if (_bases.Count > _basePositions.Length)
-                        throw new NotSupportedException($"{notEnough}[bases]");
-
-                    if (_specials.Count > _specialPositions.Length)
-                        throw new NotSupportedException($"{notEnough}[specials]");
-                }
-
-                return true;
-            }
-            catch (Exception)
-            {
-                return false;
-            }
+            foreach (var p in source)
+                destination.Enqueue(p.Value);
         }
 
-        /*
-            private void ClearPositions(byte[][] map, SortedDictionary<int, uint> positions, int r)
-            {
-                foreach (KeyValuePair<int, uint> p in positions)
-                {
-                    GetCoordinates(p.Value, out int x, out int y);
-                    ClearPositions(map, x, y, r);
-                }
-            }
-
-            private void ClearPositions(byte[][] map, int x, int y, int r)
-            {
-                int y1 = y - r;
-                int y2 = y + r;
-
-                if (y1 < 0) y1 = 0;
-                if (y2 >= _height) y2 = _height - 1;
-
-                int x1 = x - r;
-                int x2 = x + r;
-
-                if (x1 < 0) x1 = 0;
-                if (x2 >= _width) x2 = _width - 1;
-
-                int cx = x;
-                int cy = y;
-
-                for (y = y1; y <= y2; y++)
-                {
-                    for (x = x1; x <= x2; x++)
-                    {
-                        if (y != cy || x != cx)
-                        {
-                            if (_canBeCleared[map[y][x]])
-                                map[y][x] = (byte)' ';
-                            else if (!_canBeAround[map[y][x]])
-                                throw new NotSupportedException("The char at " + y + ", " + x + " is not allowed around a '" + (char)map[cx][cy] + "'");
-                        }
-                    }
-                }
-            }
-        */
-
-        private static int GetClosestIndex(List<uint> freeSpaces, double x1, double y1, double angle)
+        private void Populate(Info info, char[] array)
         {
-            double bias = double.MaxValue;
-            double distance = double.MaxValue;
-            int index = -1;
+            Contract.Assert(_map[info.Y1][info.X1] == '.');
 
-            for (int i = 0; i < freeSpaces.Count; i++)
-            {
-                GetCoordinates(freeSpaces[i], out double x2, out double y2);
-
-                double b = NormalizeAngle(GetAngle(x2, y2, x1, y1) - angle);
-
-                if (bias >= b)
-                {
-                    double d = GetDistance(x2, y2, x1, y1);
-
-                    if (bias > b || distance > d)
-                    {
-                        bias = b;
-                        distance = d;
-                        index = i;
-                    }
-                }
-            }
-
-            if (index == -1)
-                throw new NotSupportedException();
-
-            return index;
+            _map[info.Y1][info.X1] = array[_rand.NextInt32(array.Length)];
         }
 
-        private void ClearIndexes()
+        private void Populate1(Queue<Info> queue)
         {
-            _freeCount = 0;
-            _sunCount = 0;
-            _alliedCount = 0;
-            _enemyCount = 0;
-            _planetCount = 0;
-            _baseCount = 0;
-            _specialCount = 0;
-            _objectCount = 0;
+            if (!queue.TryDequeue(out Info info) && !_freeQueue.TryDequeue(out info, out _))
+                ThrowNoMorePositions();
+
+            Contract.Assert(
+                _map[info.Y1][info.X1] == '.' &&
+                _position >= 'G' && _position <= 'Z'
+            );
+
+            _map[info.Y1][info.X1] = _position;
+
+            _position++;
         }
 
-        private void ClearMap()
+        private void Populate2(Queue<Info> queue)
         {
-            for (int y = 0; y < _height; y++)
-            {
-                for (int x = 0; x < _width; x++)
-                    _map[y][x] = '.';
-            }
+            if (!queue.TryDequeue(out Info info) && !_freeQueue.TryDequeue(out info, out _))
+                ThrowNoMorePositions();
 
-            _nextPosition[0] = 'G';
+            Contract.Assert(
+                _map[info.Y1][info.X1] == '.' &&
+                _map[info.Y2][info.X2] == '.' &&
+                _position >= 'G' && _position <= 'Z'
+            );
+
+            _map[info.Y1][info.X1] = _position;
+            _map[info.Y2][info.X2] = char.ToLower(_position);
+
+            _position++;
         }
 
-        private void PopulateFreePositionsWith(char[] items, int count)
+        private void ThrowNoMorePositions()
         {
-            if (count <= 0)
-                return;
-
-            if (count >= _freePositions.Length - _freeCount)
-                throw new NotSupportedException();
-
-            int lastFreePosition = _freePositions.Length - 1;
-            int numberOfItems = items.Length;
-
-            for (int i = 0; i < count; i++)
-            {
-                int index = _rand.NextInt32(_freeCount, lastFreePosition);
-
-                GetCoordinates(_freePositions[index], out int x, out int y);
-
-                // free positions are not really discarded. we just 'shuffle' the data
-                // (to repeat this process we must sort the data again)
-
-                if (_freeCount != index)
-                    (_freePositions[_freeCount], _freePositions[index]) = (_freePositions[index], _freePositions[_freeCount]);
-
-                _freeCount++;
-
-                char item;
-
-                if (numberOfItems == 1)
-                    item = items[0];
-                else
-                    item = items[_rand.NextInt32(numberOfItems)];
-
-                Contract.Assert(_map[y][x] == '.');
-
-                _map[y][x] = item;
-            }
-        }
-
-        private void PopulateSpecificPositionWith(ref int count, uint[] positions, char nextPosition)
-        {
-            GetCoordinates(positions[count], out int x, out int y);
-
-            count++;
-
-            Contract.Assert(_map[y][x] == '.');
-
-            _map[y][x] = nextPosition;
-        }
-
-        private void PopulateSpecificPositionWith(ref int count, ulong[] positions, char nextPosition)
-        {
-            GetCoordinates(positions[count], out int x1, out int y1, out int x2, out int y2);
-
-            count++;
-
-            Contract.Assert(_map[y1][x1] == '.');
-
-            _map[y1][x1] = nextPosition;
-
-            Contract.Assert(_map[y2][x2] == '.');
-
-            _map[y2][x2] = (char)(nextPosition + 32); // AZ -> az
-        }
-
-        private char GetAndAdvancePosition()
-        {
-            char c = _nextPosition[0];
-
-            if (c > 'T')
-                throw new NotSupportedException();
-
-            _nextPosition[0]++;
-
-            TryAppendMapOverride(c);
-
-            return c;
-        }
-
-        private void TryAppendMapOverride(char c)
-        {
-            if (_tacticalMapIcons.TryGetValue(c, out string v))
-            {
-                _mapOverrides.Append(c);
-                _mapOverrides.Append(" = ");
-                _mapOverrides.AppendLine(v);
-            }
-        }
-
-        /*
-            private static void GetFirstCoordinates(SortedDictionary<int, uint> positions, out double x, out double y)
-            {
-                GetFirstCoordinates(positions, out int _x, out int _y);
-
-                x = _x;
-                y = _y;
-            }
-
-            private static void GetFirstCoordinates(SortedDictionary<int, uint> positions, out int x, out int y)
-            {
-                using SortedDictionary<int, uint>.Enumerator e = positions.GetEnumerator();
-
-                e.MoveNext();
-
-                GetCoordinates(e.Current.Value, out x, out y);
-            }
-        */
-
-        private static void GetCoordinates(uint position, out double x, out double y)
-        {
-            GetCoordinates(position, out int _x, out int _y);
-
-            x = _x;
-            y = _y;
-        }
-
-        private static void GetCoordinates(uint position, out int x, out int y)
-        {
-            x = (int)(position & 0xffff);
-            y = (int)(position >> 16);
-        }
-
-        private static void GetCoordinates(ulong position, out int x1, out int y1, out int x2, out int y2)
-        {
-            x2 = (ushort)position;
-            y2 = (ushort)(position >> 16);
-            x1 = (ushort)(position >> 32);
-            y1 = (ushort)(position >> 48);
-        }
-
-        private static double GetAngle(double x1, double y1, double x2, double y2)
-        {
-            return NormalizeAngle(Math.Atan2(y1 - y2, x1 - x2));
-        }
-
-        private static double NormalizeAngle(double a)
-        {
-            while (a < 0.0)
-                a += Math.Tau;
-
-            while (a >= Math.Tau)
-                a -= Math.Tau;
-
-            return a;
-        }
-
-        private static double GetDistance(double x1, double y1, double x2, double y2)
-        {
-            double x = x1 - x2;
-            double y = y1 - y2;
-
-            return x * x + y * y;
-        }
-
-        private static void InitializePositions(SortedDictionary<int, uint> source, ref uint[] destination)
-        {
-            destination = new uint[source.Count];
-
-            int i = 0;
-
-            foreach (KeyValuePair<int, uint> p in source)
-            {
-                destination[i] = p.Value;
-
-                i++;
-            }
-        }
-
-        private static void InitializePositions(SortedDictionary<int, uint> source1, Dictionary<int, uint> source2, ref ulong[] destination)
-        {
-            destination = new ulong[source1.Count];
-
-            int i = 0;
-
-            foreach (KeyValuePair<int, uint> p in source1)
-            {
-                Contract.Assert(source2.ContainsKey(p.Key));
-
-                destination[i] = (uint)source2[p.Key] | ((ulong)p.Value << 32);
-
-                i++;
-            }
-        }
-
-        private static void InitializePositions(Dictionary<int, uint> source, ref ulong[] destination)
-        {
-            destination = new ulong[source.Count];
-
-            int i = 0;
-
-            foreach (KeyValuePair<int, uint> p in source)
-            {
-                destination[i] = (uint)p.Key | ((ulong)p.Value << 32);
-
-                i++;
-            }
+            throw new NotSupportedException("The template doesn't contain any spawn positions");
         }
     }
 }

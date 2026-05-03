@@ -508,33 +508,33 @@ namespace SfcOpServer
 
             _terrainContents =
             [
-                new TerrainContent(.98, .02, .00, .00, false, true, 0), // asteroids1
-                new TerrainContent(.97, .03, .00, .00, false, true, 0), // asteroids2
-                new TerrainContent(.95, .04, .01, .00, false, true, 0), // asteroids3
-                new TerrainContent(.94, .05, .01, .00, false, false, 0), // asteroids4
-                new TerrainContent(.92, .06, .02, .00, false, false, 0), // asteroids5
-                new TerrainContent(.91, .07, .02, .01, false, false, 0), // asteroids6
+                new TerrainContent(.98, .02, .00, .00, false, 0), // asteroids1
+                new TerrainContent(.97, .03, .00, .00, false, 0), // asteroids2
+                new TerrainContent(.95, .04, .01, .00, false, 0), // asteroids3
+                new TerrainContent(.94, .05, .01, .00, false, 0), // asteroids4
+                new TerrainContent(.92, .06, .02, .00, false, 0), // asteroids5
+                new TerrainContent(.91, .07, .02, .01, false, 0), // asteroids6
 
-                new TerrainContent(1.0, .00, .00, .00, false, true, 0), // space1
-                new TerrainContent(.99, .00, .01, .00, false, false, 0), // space2
+                new TerrainContent(1.0, .00, .00, .00, false, 0), // space1
+                new TerrainContent(.99, .00, .01, .00, false, 0), // space2
                 new TerrainContent(),                                    // space3 (reserved for fog of war)
                 new TerrainContent(),                                    // space4 (not used by the game)
                 new TerrainContent(),                                    // space5 (not used by the game)
                 new TerrainContent(),                                    // space6 (not used by the game)
 
-                new TerrainContent(.92, .00, .06, .02, true, true, 0),  // nebula1
-                new TerrainContent(.88, .02, .06, .04, true, true, 0),  // nebula2
-                new TerrainContent(.81, .04, .11, .04, true, true, 0),  // nebula3
-                new TerrainContent(.69, .07, .12, .06, true, false, 0),  // nebula4
-                new TerrainContent(.57, .09, .16, .08, true, false, 0),  // nebula5
-                new TerrainContent(.62, .11, .17, .10, true, false, 0),  // nebula6
+                new TerrainContent(.92, .00, .06, .02, true, 0),  // nebula1
+                new TerrainContent(.88, .02, .06, .04, true, 0),  // nebula2
+                new TerrainContent(.81, .04, .11, .04, true, 0),  // nebula3
+                new TerrainContent(.69, .07, .12, .06, true, 0),  // nebula4
+                new TerrainContent(.57, .09, .16, .08, true, 0),  // nebula5
+                new TerrainContent(.62, .11, .17, .10, true, 0),  // nebula6
 
-                new TerrainContent(.90, .00, .05, .05, false, true, 1), // blackhole1
-                new TerrainContent(.85, .00, .10, .05, false, true, 1), // blackhole2
-                new TerrainContent(.80, .00, .10, .10, false, true, 2), // blackhole3
-                new TerrainContent(.75, .00, .15, .10, false, false, 2), // blackhole4
-                new TerrainContent(.70, .05, .15, .10, false, false, 3), // blackhole5
-                new TerrainContent(.60, .10, .15, .15, false, false, 3)  // blackhole6
+                new TerrainContent(.90, .00, .05, .05, false, 1), // blackhole1
+                new TerrainContent(.85, .00, .10, .05, false, 1), // blackhole2
+                new TerrainContent(.80, .00, .10, .10, false, 2), // blackhole3
+                new TerrainContent(.75, .00, .15, .10, false, 2), // blackhole4
+                new TerrainContent(.70, .05, .15, .10, false, 3), // blackhole5
+                new TerrainContent(.60, .10, .15, .15, false, 3)  // blackhole6
             ];
 
             Contract.Assert(_terrainContents.Length == 24);
@@ -553,8 +553,6 @@ namespace SfcOpServer
                     content.IonStorms = gf.GetValue(path, "IonStorms", (float)content.IonStorms);
 
                     content.Nebulas = gf.GetValue(path, "Nebulas", content.Nebulas ? 1 : 0) != 0;
-                    content.Sun = gf.GetValue(path, "Sun", content.Sun ? 1 : 0) != 0;
-
                     content.BlackHoles = gf.GetValue(path, "BlackHoles", content.BlackHoles);
 
                     // checks if the values are valid

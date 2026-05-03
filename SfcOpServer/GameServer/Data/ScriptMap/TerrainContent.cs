@@ -13,11 +13,9 @@ namespace SfcOpServer
         public double IonStorms;
 
         public bool Nebulas;
-        public bool Sun;
-
         public int BlackHoles;
 
-        public TerrainContent(double space, double asteroids, double dustClouds, double ionStorms, bool nebulas, bool sun, int blackHoles)
+        public TerrainContent(double space, double asteroids, double dustClouds, double ionStorms, bool nebulas, int blackHoles)
         {
             double n = 1.0 / (space + asteroids + dustClouds + ionStorms);
 
@@ -27,8 +25,6 @@ namespace SfcOpServer
             IonStorms = ionStorms * n;
 
             Nebulas = nebulas;
-            Sun = sun;
-
             BlackHoles = blackHoles;
         }
 
@@ -40,8 +36,6 @@ namespace SfcOpServer
             IonStorms = r.ReadDouble();
 
             Nebulas = r.ReadBoolean();
-            Sun = r.ReadBoolean();
-
             BlackHoles = r.ReadInt32();
         }
 
@@ -53,8 +47,6 @@ namespace SfcOpServer
             w.Write(IonStorms);
 
             w.Write(Nebulas);
-            w.Write(Sun);
-
             w.Write(BlackHoles);
         }
 
