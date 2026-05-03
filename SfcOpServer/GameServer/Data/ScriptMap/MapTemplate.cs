@@ -498,14 +498,14 @@ namespace SfcOpServer
                 {
                     if (_objectInfo.ContainsKey(c))
                     {
-                        key = $"{(i - 38) % 10}";
+                        key = $"PL{(c - 38) % 10}";
 
-                        if (ini.TryGetValue("Objects/Names", key, out value, out _))
+                        if (ini.TryGetValue("Map/Overrides", key, out value, out _))
                             _modelFilenames.Add(c, value);
 
-                        key = $"{c}";
+                        key = c.ToString();
 
-                        if (ini.TryGetValue("Objects/Icons", key, out value, out quotes))
+                        if (ini.TryGetValue("Map/Overrides", key, out value, out quotes))
                         {
                             key = value.Replace(" ", string.Empty).ToLowerInvariant();
 
