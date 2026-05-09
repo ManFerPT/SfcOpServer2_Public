@@ -508,33 +508,33 @@ namespace SfcOpServer
 
             _terrainContents =
             [
-                new TerrainContent(.98, .02, .00, .00, false, 0), // asteroids1
-                new TerrainContent(.97, .03, .00, .00, false, 0), // asteroids2
-                new TerrainContent(.95, .04, .01, .00, false, 0), // asteroids3
-                new TerrainContent(.94, .05, .01, .00, false, 0), // asteroids4
-                new TerrainContent(.92, .06, .02, .00, false, 0), // asteroids5
-                new TerrainContent(.91, .07, .02, .01, false, 0), // asteroids6
+                new TerrainContent(.98, .02, .00, .00, 0, false), // asteroids1
+                new TerrainContent(.97, .03, .00, .00, 0, false), // asteroids2
+                new TerrainContent(.95, .04, .01, .00, 0, false), // asteroids3
+                new TerrainContent(.94, .05, .01, .00, 0, false), // asteroids4
+                new TerrainContent(.92, .06, .02, .00, 0, false), // asteroids5
+                new TerrainContent(.91, .07, .02, .01, 0, false), // asteroids6
 
-                new TerrainContent(1.0, .00, .00, .00, false, 0), // space1
-                new TerrainContent(.99, .00, .01, .00, false, 0), // space2
+                new TerrainContent(1.0, .00, .00, .00, 0, false), // space1
+                new TerrainContent(.99, .00, .01, .00, 0, false), // space2
                 new TerrainContent(),                                    // space3 (reserved for fog of war)
                 new TerrainContent(),                                    // space4 (not used by the game)
                 new TerrainContent(),                                    // space5 (not used by the game)
                 new TerrainContent(),                                    // space6 (not used by the game)
 
-                new TerrainContent(.92, .00, .06, .02, true, 0),  // nebula1
-                new TerrainContent(.88, .02, .06, .04, true, 0),  // nebula2
-                new TerrainContent(.81, .04, .11, .04, true, 0),  // nebula3
-                new TerrainContent(.69, .07, .12, .06, true, 0),  // nebula4
-                new TerrainContent(.57, .09, .16, .08, true, 0),  // nebula5
-                new TerrainContent(.62, .11, .17, .10, true, 0),  // nebula6
+                new TerrainContent(.92, .00, .06, .02, 0, true),  // nebula1
+                new TerrainContent(.88, .02, .06, .04, 0, true),  // nebula2
+                new TerrainContent(.81, .04, .11, .04, 0, true),  // nebula3
+                new TerrainContent(.69, .07, .12, .06, 0, true),  // nebula4
+                new TerrainContent(.57, .09, .16, .08, 0, true),  // nebula5
+                new TerrainContent(.62, .11, .17, .10, 0, true),  // nebula6
 
-                new TerrainContent(.90, .00, .05, .05, false, 1), // blackhole1
-                new TerrainContent(.85, .00, .10, .05, false, 1), // blackhole2
-                new TerrainContent(.80, .00, .10, .10, false, 2), // blackhole3
-                new TerrainContent(.75, .00, .15, .10, false, 2), // blackhole4
-                new TerrainContent(.70, .05, .15, .10, false, 3), // blackhole5
-                new TerrainContent(.60, .10, .15, .15, false, 3)  // blackhole6
+                new TerrainContent(.90, .00, .05, .05, 1, false), // blackhole1
+                new TerrainContent(.85, .00, .10, .05, 1, false), // blackhole2
+                new TerrainContent(.80, .00, .10, .10, 2, false), // blackhole3
+                new TerrainContent(.75, .00, .15, .10, 2, false), // blackhole4
+                new TerrainContent(.70, .05, .15, .10, 3, false), // blackhole5
+                new TerrainContent(.60, .10, .15, .15, 3, false)  // blackhole6
             ];
 
             Contract.Assert(_terrainContents.Length == 24);
@@ -543,8 +543,10 @@ namespace SfcOpServer
             {
                 ref TerrainContent content = ref _terrainContents[i];
 
-                if (content.Space != 0.0)
+                if (content.IsInitialized)
                 {
+                    Contract.Assert(i < 8 || i > 11);
+
                     string path = "Map/Terrains/" + _mapTerrains[i];
 
                     content.Space = gf.GetValue(path, "Space", (float)content.Space);
@@ -552,23 +554,8 @@ namespace SfcOpServer
                     content.DustClouds = gf.GetValue(path, "DustClouds", (float)content.DustClouds);
                     content.IonStorms = gf.GetValue(path, "IonStorms", (float)content.IonStorms);
 
-                    content.Nebulas = gf.GetValue(path, "Nebulas", content.Nebulas ? 1 : 0) != 0;
                     content.BlackHoles = gf.GetValue(path, "BlackHoles", content.BlackHoles);
-
-                    // checks if the values are valid
-
-                    if (
-                        content.Space < 0.0 ||
-                        content.Asteroids < 0.0 ||
-                        content.DustClouds < 0.0 ||
-                        content.IonStorms < 0.0 ||
-
-                        content.BlackHoles < 0 ||
-                        content.BlackHoles > 6
-                    )
-                        throw new NotSupportedException();
-
-                    // normalizes the values
+                    content.Nebulas = gf.GetValue(path, "Nebulas", content.Nebulas ? 1 : 0) != 0;
 
                     content.Normalize();
                 }
@@ -577,17 +564,17 @@ namespace SfcOpServer
                 Debug.WriteLine
                 (
                     "new TerrainContent(" +
-                    Math.Round(content.Space, 2, MidpointRounding.AwayFromZero).ToString("F2", CultureInfo.InvariantCulture)[1..] +
+                    Math.Round(content.Space, 2, MidpointRounding.AwayFromZero).ToString("F2", CultureInfo.InvariantCulture) +
                     ", " +
-                    Math.Round(content.Asteroids, 2, MidpointRounding.AwayFromZero).ToString("F2", CultureInfo.InvariantCulture)[1..] +
+                    Math.Round(content.Asteroids, 2, MidpointRounding.AwayFromZero).ToString("F2", CultureInfo.InvariantCulture) +
                     ", " +
-                    Math.Round(content.DustClouds, 2, MidpointRounding.AwayFromZero).ToString("F2", CultureInfo.InvariantCulture)[1..] +
+                    Math.Round(content.DustClouds, 2, MidpointRounding.AwayFromZero).ToString("F2", CultureInfo.InvariantCulture) +
                     ", " +
-                    Math.Round(content.IonStorms, 2, MidpointRounding.AwayFromZero).ToString("F2", CultureInfo.InvariantCulture)[1..] +
-                    ", " +
-                    content.Nebulas.ToString(CultureInfo.InvariantCulture).ToLowerInvariant() +
+                    Math.Round(content.IonStorms, 2, MidpointRounding.AwayFromZero).ToString("F2", CultureInfo.InvariantCulture) +
                     ", " +
                     content.BlackHoles.ToString(CultureInfo.InvariantCulture) +
+                    ", " +
+                    content.Nebulas.ToString(CultureInfo.InvariantCulture).ToLowerInvariant() +
                     "), // " +
                     _mapTerrains[i]
                 );

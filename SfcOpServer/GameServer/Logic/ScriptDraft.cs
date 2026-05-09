@@ -590,12 +590,14 @@ namespace SfcOpServer
                 Config = null
             };
 
-            // gets the teams
+            // gets the race masks
 
             uint alliedRaces = (uint)_alliances[(int)host.CharacterRace];
             uint neutralRaces = (uint)_alliances[(int)Races.kNeutralRace];
 
             Contract.Assert((alliedRaces & neutralRaces) == 0);
+
+            // gets the team queues
 
             Queue<Character> alliedHuman = new();
             Queue<Character> alliedAI = new();
@@ -603,7 +605,15 @@ namespace SfcOpServer
             Queue<Character> enemyAI = new();
             Queue<Character> neutralAI = new();
 
-            alliedHuman.Enqueue(host);
+            // gets the slots remaining
+
+            const int slotsAvailable = 60;
+
+            int slotsRemaining = slotsAvailable - 1; // 1 slot per script
+
+            // adds the host team
+
+            TryEnqueue(alliedHuman, host, ref slotsRemaining);
 
             foreach (KeyValuePair<int, object> p in hex.Population)
             {
@@ -621,14 +631,23 @@ namespace SfcOpServer
                             (character.State & Character.States.IsHumanBusyOnline) == Character.States.IsHumanBusyOnline &&
                             character.Client.LauncherId != 0
                         )
-                            alliedHuman.Enqueue(character);
+                        {
+                            if (!TryEnqueue(alliedHuman, character, ref slotsRemaining))
+                                goto notSupported;
+                        }
                         else if (character.State == Character.States.IsCpuAfkBusyOnline)
-                            alliedAI.Enqueue(character);
+                        {
+                            if (!TryEnqueue(alliedAI, character, ref slotsRemaining))
+                                goto notSupported;
+                        }
                     }
                     else if ((neutralRaces & mask) != 0)
                     {
                         if (character.State == Character.States.IsCpuAfkBusyOnline)
-                            neutralAI.Enqueue(character);
+                        {
+                            if (!TryEnqueue(neutralAI, character, ref slotsRemaining))
+                                goto notSupported;
+                        }
                     }
                     else
                     {
@@ -638,28 +657,26 @@ namespace SfcOpServer
                             (character.State & Character.States.IsHumanBusyOnline) == Character.States.IsHumanBusyOnline &&
                             character.Client.LauncherId != 0
                         )
-                            enemyHuman.Enqueue(character);
+                        {
+                            if (!TryEnqueue(enemyHuman, character, ref slotsRemaining))
+                                goto notSupported;
+                        }
                         else if (character.State == Character.States.IsCpuAfkBusyOnline)
-                            enemyAI.Enqueue(character);
+                        {
+                            if (!TryEnqueue(enemyAI, character, ref slotsRemaining))
+                                goto notSupported;
+                        }
                     }
                 }
             }
 
-            // keeps track of the number of allied and enemy teams
-            // as the queues are going to be cleared when adding the teams
+            // checks the number of teams
 
-            int totalAlliedHuman = alliedHuman.Count;
-            int totalAlliedAI = alliedAI.Count;
-            int totalEnemyHuman = enemyHuman.Count;
-            int totalEnemyAI = enemyAI.Count;
+            int totalAllied = alliedHuman.Count + alliedAI.Count;
+            int totalEnemy = enemyHuman.Count + enemyAI.Count;
             int totalNeutral = neutralAI.Count;
 
-            // checks if we have a valid number of teams
-
-            int totalAllied = totalAlliedHuman + totalAlliedAI;
-            int totalEnemy = totalEnemyHuman + totalEnemyAI;
-
-            if ((totalAllied + totalEnemy + totalNeutral) > 20)
+            if (totalAllied + totalEnemy + totalNeutral > 20)
                 goto notSupported;
 
             // creates the human teams
@@ -703,6 +720,16 @@ namespace SfcOpServer
             Contract.Assert(draft.Mission == null);
 
             return false;
+        }
+
+        private bool TryEnqueue(Queue<Character> team, Character character, ref int slotsRemaining)
+        {
+            team.Enqueue(character);
+
+            slotsRemaining -= 2; // 2 slots per team
+            slotsRemaining -= character.ShipCount; // 1 slot per ship
+
+            return slotsRemaining >= 0;
         }
 
         private void AddTeam(Mission mission, Character character, TeamTags teamTag)

@@ -107,6 +107,9 @@ namespace SfcOpServer
         private const char endChar0 = 'g';
         private const char endChar1 = 'z';
 
+        private const char blackHoleChar0 = 'A';
+        private const char blackHoleChar1 = 'C';
+
         private const char emptyChar = ' ';
         private const char freeChar = '.';
         private const char nebulaChar = '?';
@@ -155,6 +158,7 @@ namespace SfcOpServer
         private readonly Info _nebulaInfo;
         private readonly List<Info> _freeInfo;
         private readonly Dictionary<char, List<Info>> _objectInfo;
+        private readonly SortedDictionary<char, Info> _blackHoleInfo;
         private readonly SortedDictionary<char, Info>[] _entityInfo;
 
         private readonly Dictionary<char, string> _modelFilenames;
@@ -182,6 +186,7 @@ namespace SfcOpServer
         static MapTemplate()
         {
             Contract.Assert(SubPath.Equals(Utils.NormalizePath(SubPath), StringComparison.Ordinal));
+            Contract.Assert(blackHoleChar1 - blackHoleChar0 + 1 == TerrainContent.MaxBlackHoles);
 
             _rand = new();
 
@@ -214,6 +219,9 @@ namespace SfcOpServer
             for (i = endChar0; i <= endChar1; i++)
                 _isValid[i] = 1;
 
+            for (i = blackHoleChar0; i <= blackHoleChar1; i++)
+                _isValid[i] = 1;
+
             _isValid[emptyChar] = 1;
             _isValid[freeChar] = 1;
             _isValid[nebulaChar] = 1;
@@ -231,9 +239,9 @@ namespace SfcOpServer
         {
             try
             {
-                // tries to read the file
-
                 filename = Utils.NormalizePath(filename);
+
+                // tries to read the file
 
                 byte[] b = File.ReadAllBytes(filename);
 
@@ -275,6 +283,7 @@ namespace SfcOpServer
                 _nebulaInfo = new();
                 _freeInfo = [];
                 _objectInfo = [];
+                _blackHoleInfo = [];
                 _entityInfo = new SortedDictionary<char, Info>[(int)Entities.Total];
 
                 for (i = 0; i < (int)Entities.Total; i++)
@@ -393,6 +402,12 @@ namespace SfcOpServer
 
                             continue;
                         }
+                        else if (c >= blackHoleChar0 && c <= blackHoleChar1)
+                        {
+                            _blackHoleInfo.Add(c, new(x, y));
+
+                            continue;
+                        }
                         else if (c >= endChar0 && c <= endChar1)
                         {
                             c = char.ToUpper(c);
@@ -492,6 +507,13 @@ namespace SfcOpServer
                 CheckPosition(_entityInfo[(int)Entities.Bases]);
                 CheckPosition(_entityInfo[(int)Entities.Specials]);
 
+                // checks the blackhole positions
+
+                if (_blackHoleInfo.Count != TerrainContent.MaxBlackHoles)
+                    throw new NotSupportedException("You didn't set the 3 'black hole' spawn positions (A to C)");
+
+                CheckPosition(_blackHoleInfo);
+
                 // initializes the remaining variables
 
                 for (c = '0'; c <= '9'; c++)
@@ -522,7 +544,7 @@ namespace SfcOpServer
                 {
                     value = value.ToLowerInvariant();
 
-                    if (!value.EndsWith(".mod", StringComparison.OrdinalIgnoreCase))
+                    if (!value.EndsWith(".mod", StringComparison.Ordinal))
                         value += ".mod";
 
                     key = filename[..filename.IndexOf($"/{SubPath}/")] + "/assets/models/space/" + value;
@@ -567,6 +589,7 @@ namespace SfcOpServer
                 _nebulaInfo = new();
                 _freeInfo = null;
                 _objectInfo = null;
+                _blackHoleInfo = null;
                 _entityInfo = null;
 
                 _modelFilenames = null;
@@ -642,6 +665,23 @@ namespace SfcOpServer
 
             const int maxIcons = 40;
 
+            i = content.BlackHoles;
+
+            if (i > 0)
+            {
+                var e = _blackHoleInfo.GetEnumerator();
+
+                do
+                {
+                    e.MoveNext();
+
+                    Populate(e.Current.Value, _blackHoles);
+
+                    i--;
+                }
+                while (i > 0);
+            }
+
             i = _freeInfo.Count;
 
             if (i > 0)
@@ -660,9 +700,6 @@ namespace SfcOpServer
 
                 for (i = (int)Math.Truncate(content.IonStorms); i > 0 && _freeQueue.Count > 0; i--)
                     Populate(_freeQueue.Dequeue(), _ionStorms);
-
-                for (i = content.BlackHoles; i > 0 && _freeQueue.Count > 0; i--)
-                    Populate(_freeQueue.Dequeue(), _blackHoles);
             }
 
             if (content.Nebulas)

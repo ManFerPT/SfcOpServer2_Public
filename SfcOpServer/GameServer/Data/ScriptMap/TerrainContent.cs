@@ -1,31 +1,38 @@
-﻿#pragma warning disable IDE0130
+﻿#pragma warning disable IDE0130, IDE0290
 
 using System;
+using System.Diagnostics.Contracts;
 using System.IO;
 
 namespace SfcOpServer
 {
     public struct TerrainContent
     {
+        public const int MaxBlackHoles = 3;
+
         public double Space;
         public double Asteroids;
         public double DustClouds;
         public double IonStorms;
 
-        public bool Nebulas;
         public int BlackHoles;
+        public bool Nebulas;
 
-        public TerrainContent(double space, double asteroids, double dustClouds, double ionStorms, bool nebulas, int blackHoles)
+        private bool _isInitialized;
+
+        public readonly bool IsInitialized => _isInitialized;
+
+        public TerrainContent(double space, double asteroids, double dustClouds, double ionStorms, int blackHoles, bool nebulas)
         {
-            double n = 1.0 / (space + asteroids + dustClouds + ionStorms);
+            Space = space;
+            Asteroids = asteroids;
+            DustClouds = dustClouds;
+            IonStorms = ionStorms;
 
-            Space = space * n;
-            Asteroids = asteroids * n;
-            DustClouds = dustClouds * n;
-            IonStorms = ionStorms * n;
-
-            Nebulas = nebulas;
             BlackHoles = blackHoles;
+            Nebulas = nebulas;
+
+            _isInitialized = true;
         }
 
         public void ReadFrom(BinaryReader r)
@@ -35,8 +42,10 @@ namespace SfcOpServer
             DustClouds = r.ReadDouble();
             IonStorms = r.ReadDouble();
 
-            Nebulas = r.ReadBoolean();
             BlackHoles = r.ReadInt32();
+            Nebulas = r.ReadBoolean();
+
+            _isInitialized = r.ReadBoolean();
         }
 
         public readonly void WriteTo(BinaryWriter w)
@@ -46,18 +55,35 @@ namespace SfcOpServer
             w.Write(DustClouds);
             w.Write(IonStorms);
 
-            w.Write(Nebulas);
             w.Write(BlackHoles);
+            w.Write(Nebulas);
+
+            w.Write(_isInitialized);
         }
 
         public void Normalize()
         {
-            double sum = Space + Asteroids + DustClouds + IonStorms;
+            double space = Math.Max(0.0, Space);
+            double asteroids = Math.Max(0.0, Asteroids);
+            double dustClouds = Math.Max(0.0, DustClouds);
+            double ionStorms = Math.Max(0.0, IonStorms);
 
-            Space = Math.Round(Space / sum, 2, MidpointRounding.AwayFromZero);
-            Asteroids = Math.Round(Asteroids / sum, 2, MidpointRounding.AwayFromZero);
-            DustClouds = Math.Round(DustClouds / sum, 2, MidpointRounding.AwayFromZero);
-            IonStorms = Math.Round(IonStorms / sum, 2, MidpointRounding.AwayFromZero);
+            double n = 1.0 / (space + asteroids + dustClouds + ionStorms);
+
+            asteroids = Math.Round(asteroids * n, 5, MidpointRounding.AwayFromZero);
+            dustClouds = Math.Round(dustClouds * n, 5, MidpointRounding.AwayFromZero);
+            ionStorms = Math.Round(ionStorms * n, 5, MidpointRounding.AwayFromZero);
+
+            space = 1.0 - asteroids - dustClouds - ionStorms;
+
+            Contract.Assert(space + asteroids + dustClouds + ionStorms == 1.0);
+
+            Space = space;
+            Asteroids = asteroids;
+            DustClouds = dustClouds;
+            IonStorms = ionStorms;
+
+            BlackHoles = Math.Max(0, Math.Min(BlackHoles, MaxBlackHoles));
         }
     }
 }

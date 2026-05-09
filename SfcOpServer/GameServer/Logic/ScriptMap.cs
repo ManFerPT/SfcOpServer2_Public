@@ -42,10 +42,7 @@ namespace SfcOpServer
 
                     mapTemplate.AddPlanet();
                 }
-                else if (
-                    (ship.ClassType >= ClassTypes.kClassListeningPost && ship.ClassType <= ClassTypes.kClassStarBase) ||
-                    (ship.ClassType == ClassTypes.kClassSpecial && _shiplist.TryGetValue(ship.ShipClassName, out ShipData data) && data.HullType == HullTypes.kHullStarDock)
-                )
+                else if (ship.ClassType >= ClassTypes.kClassListeningPost && ship.ClassType <= ClassTypes.kClassStarBase)
                 {
                     baseBits |= i;
 
