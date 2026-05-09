@@ -809,8 +809,7 @@ namespace SfcOpServer
 
         private void Populate1(Queue<Info> queue)
         {
-            if (!queue.TryDequeue(out Info info) && !_freeQueue.TryDequeue(out info, out _))
-                ThrowNoMorePositions();
+            GetCoordinates(queue, out Info info);
 
             Contract.Assert(
                 _map[info.Y1][info.X1] == '.' &&
@@ -824,8 +823,7 @@ namespace SfcOpServer
 
         private void Populate2(Queue<Info> queue)
         {
-            if (!queue.TryDequeue(out Info info) && !_freeQueue.TryDequeue(out info, out _))
-                ThrowNoMorePositions();
+            GetCoordinates(queue, out Info info);
 
             Contract.Assert(
                 _map[info.Y1][info.X1] == '.' &&
@@ -839,8 +837,18 @@ namespace SfcOpServer
             _position++;
         }
 
-        private void ThrowNoMorePositions()
+        private void GetCoordinates(Queue<Info> queue, out Info coordinates)
         {
+            if (queue.TryDequeue(out coordinates))
+                return;
+
+            if (_freeQueue.TryDequeue(out Info start, out _) && _freeQueue.TryDequeue(out Info end, out _))
+            {
+                coordinates = new(start.X1, start.Y1, end.X1, end.Y1);
+
+                return;
+            }
+
             throw new NotSupportedException("The template doesn't contain any spawn positions");
         }
     }
