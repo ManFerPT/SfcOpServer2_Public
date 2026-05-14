@@ -21,7 +21,7 @@ namespace SfcOpClient
             string directoryName;
 
 #if DEBUG
-            directoryName = "D:\\Games\\Starfleet Command 2 Orion Pirates\\";
+            directoryName = "D:\\Projects\\SfcOpTemplate\\";
 #else
             directoryName = AppContext.BaseDirectory;
 #endif
@@ -248,8 +248,8 @@ Ip = ""192.168.1.64""
 Port = 27001
 
 [3D]
-Width = 1280
-Height = 720
+Width = 1920
+Height = 1080
 
 [Cpu]
 Affinity = 0 // bitmask, set to 1 in windows 10

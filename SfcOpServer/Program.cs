@@ -72,7 +72,7 @@ namespace SfcOpServer
             // starts the services
 
 #if DEBUG
-            string appDirectory = "D:\\Games\\Starfleet Command 2 Orion Pirates\\";
+            string appDirectory = "D:\\Projects\\SfcOpTemplate\\";
 
             Contract.Assert(Directory.Exists(appDirectory));
 #else
