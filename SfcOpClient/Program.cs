@@ -128,7 +128,7 @@ namespace SfcOpClient
 
             gf.Clear();
 
-            if (!TrySetMeta(gf, directoryName, remoteIP))
+            if (!TrySetMeta(gf, directoryName, remoteIP, viewportWidth, viewportHeight))
                 goto somethingWentWrong;
 
             //if (!TrySetRegistry(gamePath, directoryName, fileName))
@@ -395,19 +395,22 @@ Windows Registry Editor Version 5.00
             }
         }
 
-        private static bool TrySetMeta(GFFile gf, string directoryName, string remoteIP)
+        private static bool TrySetMeta(GFFile gf, string directoryName, string remoteIP, int viewportWidth, int viewportHeight)
         {
             bool r = false;
 
             if (gf.Load(Path.Combine(directoryName, "sfc.ini")))
             {
+                gf.AddOrUpdate("3D", "Width", viewportWidth);
+                gf.AddOrUpdate("3D", "Height", viewportHeight);
+
+                gf.AddOrUpdate("Meta", "WONMotd", remoteIP + ":27002");
+
                 gf.AddOrUpdate("Gamespy", "motd", remoteIP + ":27002");
                 gf.AddOrUpdate("Gamespy", "master", remoteIP);
                 gf.AddOrUpdate("Gamespy", "key", remoteIP);
                 gf.AddOrUpdate("Gamespy", "gpsp", remoteIP);
                 gf.AddOrUpdate("Gamespy", "gpcm", remoteIP);
-
-                gf.AddOrUpdate("Meta", "WONMotd", remoteIP + ":27002");
 
                 gf.Save();
                 gf.Clear();

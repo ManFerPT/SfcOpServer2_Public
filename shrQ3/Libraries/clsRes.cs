@@ -43,13 +43,17 @@ namespace shrQ3
                     }
                     else if (width > 800 && height >= 600)
                     {
-                        GetResolutions(q3, out SortedDictionary<int, Size> d);
+                        SortedDictionary<int, Size> d = [];
+
+                        GetResolutions(q3, d);
 
                         if (!d.TryGetValue(width, out Size s))
                         {
                             foreach (KeyValuePair<int, Size> p in d)
                             {
                                 s = p.Value;
+
+                                Contract.Assert(s.Width != 0 && s.Height != 0);
 
                                 if (s.Width >= width)
                                     break;
@@ -67,7 +71,9 @@ namespace shrQ3
                 }
                 else
                 {
-                    GetResolutions(q3, out SortedDictionary<int, Size> d);
+                    SortedDictionary<int, Size> d = [];
+
+                    GetResolutions(q3, d);
 
                     if (resolutions.Count != d.Count)
                         throw new NotSupportedException();
@@ -77,7 +83,13 @@ namespace shrQ3
                     List<Size> oldResolutions = new(d.Count);
 
                     foreach (KeyValuePair<int, Size> p in d)
-                        oldResolutions.Add(p.Value);
+                    {
+                        Size s = p.Value;
+
+                        Contract.Assert(s.Width != 0 && s.Height != 0);
+
+                        oldResolutions.Add(s);
+                    }
 
                     d.Clear();
 
@@ -125,10 +137,8 @@ namespace shrQ3
             }
         }
 
-        private static void GetResolutions(clsQ3 q3, out SortedDictionary<int, Size> d)
+        private static void GetResolutions(clsQ3 q3, SortedDictionary<int, Size> d)
         {
-            d = [];
-
             foreach (KeyValuePair<int, tAsset> p in q3.Assets)
             {
                 string t = p.Value.Name.Value;
