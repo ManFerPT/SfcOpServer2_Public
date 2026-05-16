@@ -128,7 +128,7 @@ namespace SfcOpClient
 
             gf.Clear();
 
-            if (!TrySetMeta(gf, directoryName, remoteIP, viewportWidth, viewportHeight))
+            if (!TryUpdateSettings(gf, directoryName, remoteIP, viewportWidth, viewportHeight))
                 goto somethingWentWrong;
 
             //if (!TrySetRegistry(gamePath, directoryName, fileName))
@@ -395,7 +395,7 @@ Windows Registry Editor Version 5.00
             }
         }
 
-        private static bool TrySetMeta(GFFile gf, string directoryName, string remoteIP, int viewportWidth, int viewportHeight)
+        private static bool TryUpdateSettings(GFFile gf, string directoryName, string remoteIP, int viewportWidth, int viewportHeight)
         {
             bool r = false;
 
@@ -417,7 +417,6 @@ Windows Registry Editor Version 5.00
 
                 if (gf.Load(Path.Combine(directoryName, "Assets/Settings/Local/Multiplayer/ServerSetup.gf")))
                 {
-                    gf.AddOrUpdate("WONDirectoryServer", "ServerPath", "/StarFleetCommand2/Game/Release", true);
                     gf.AddOrUpdate("WONDirectoryServer/Addresses", "0", remoteIP + ":15101", true);
 
                     gf.Save();
