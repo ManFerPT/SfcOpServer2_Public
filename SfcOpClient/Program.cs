@@ -324,7 +324,6 @@ Windows Registry Editor Version 5.00
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\GameSpy]
 [HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\GameSpy\CDKeys]
-""StarfleetCommand2""=hex:0d,1e,01,da,d5,33,51,9e,c7,e9,cc,7f,94,43,0e,20,c4,e0,de,54,a3,e8,05,c6
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Taldren]
 [HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Taldren\Starfleet Command Orion Pirates]
