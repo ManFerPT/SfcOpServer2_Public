@@ -673,7 +673,7 @@ namespace SfcOpServer
 
         private void CopyShipData(ShipData data, out Ship ship)
         {
-            Rent(2048, out byte[] b, out MemoryStream m, out BinaryWriter w, out BinaryReader r);
+            Utils.Rent(2048, out byte[] b, out MemoryStream m, out BinaryWriter w, out BinaryReader r);
 
             // ----------------------------------------------------------------------------------------------------------------------------------------------------
             // header
@@ -830,7 +830,7 @@ namespace SfcOpServer
 
             // ----------------------------------------------------------------------------------------------------------------------------------------------------
 
-            Return(b, m, w, r);
+            Utils.Return(b, m, w, r);
         }
 
         private bool GetShipData(Races race, ClassTypes minClassType, ClassTypes maxClassType, int minBPV, int maxBPV, int yearAvailable, out ShipData shipData)

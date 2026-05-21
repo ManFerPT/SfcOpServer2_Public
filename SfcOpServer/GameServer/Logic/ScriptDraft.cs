@@ -902,7 +902,7 @@ namespace SfcOpServer
 
                 count = owner.ShipCount;
 
-                Rent(4096, out byte[] b, out MemoryStream m, out BinaryWriter w, out BinaryReader r);
+                Utils.Rent(4096, out byte[] b, out MemoryStream m, out BinaryWriter w, out BinaryReader r);
 
                 for (int i = count - 1; i >= 0; i--)
                 {
@@ -932,7 +932,7 @@ namespace SfcOpServer
                     Push(clone);
                 }
 
-                Return(b, m, w, r);
+                Utils.Return(b, m, w, r);
 
                 // ship count
 

@@ -2,15 +2,11 @@
 using shrServices;
 
 using System;
-using System.Buffers;
 using System.Collections.Concurrent;
 using System.Diagnostics.Contracts;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -58,6 +54,26 @@ namespace SfcOpServer
             _client6667 = _ircService.CreateInternalClient();
         }
 
+        protected override void TryDispose()
+        {
+            base.TryDispose();
+
+            // clients
+
+            _ircService.CloseInternalClient(_client6667);
+
+            // servers
+
+            _ircService.Dispose();
+
+            _listener27000.Dispose();
+            _listener27001.Dispose();
+
+            // data
+
+            DisposeStack();
+        }
+
         public void Start()
         {
             InitializeData();
@@ -84,28 +100,6 @@ namespace SfcOpServer
 
             Dispose();
         }
-
-        protected override void TryDispose()
-        {
-            base.TryDispose();
-
-            // clients
-
-            _ircService.CloseInternalClient(_client6667);
-
-            // servers
-
-            _ircService.Dispose();
-
-            _listener27000.Dispose();
-            _listener27001.Dispose();
-
-            // data
-
-            DisposeStack();
-        }
-
-        // clients
 
         private async Task ProcessClientAsync(Socket socket)
         {
@@ -136,8 +130,6 @@ namespace SfcOpServer
                     socket.Dispose();
             }
         }
-
-        // launchers
 
         private async Task ProcessLauncherAsync(Socket socket)
         {
@@ -200,37 +192,6 @@ namespace SfcOpServer
                 else
                     socket.Dispose();
             }
-        }
-
-        private static int GetEndPointAddress(EndPoint ep)
-        {
-            Contract.Assert(ep != null && ep.AddressFamily == AddressFamily.InterNetwork);
-
-            // 0-1 AddressFamily
-            // 2-3 Port
-            // 4-7 Address 
-
-            return Unsafe.ReadUnaligned<int>(ref MemoryMarshal.GetReference(ep.Serialize().Buffer[4..].Span));
-        }
-
-        // byte pool
-
-        public static void Rent(int size, out byte[] b, out MemoryStream m, out BinaryWriter w, out BinaryReader r)
-        {
-            b = ArrayPool<byte>.Shared.Rent(size);
-
-            m = new MemoryStream(b);
-            w = new BinaryWriter(m, Encoding.UTF8, true);
-            r = new BinaryReader(m, Encoding.UTF8, true);
-        }
-
-        public static void Return(byte[] b, MemoryStream m, BinaryWriter w, BinaryReader r)
-        {
-            r.Dispose();
-            w.Dispose();
-            m.Dispose();
-
-            ArrayPool<byte>.Shared.Return(b);
         }
     }
 }

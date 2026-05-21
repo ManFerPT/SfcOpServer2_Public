@@ -3,10 +3,12 @@
 using System;
 using System.Buffers;
 using System.Buffers.Text;
-using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using System.IO;
+using System.Net;
+using System.Net.Sockets;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Unicode;
@@ -248,41 +250,37 @@ namespace shrServices
             throw new NotSupportedException();
         }
 
-#if DEBUG
-        public static void DebugUtf8Array(byte[] buffer, int offset)
+        public static void Rent(int size, out byte[] b, out MemoryStream m, out BinaryWriter w, out BinaryReader r)
         {
-            StringBuilder t = new(32768);
+            b = ArrayPool<byte>.Shared.Rent(size);
 
-            for (int i = offset; i < buffer.Length; i++)
-            {
-                int j = buffer[i];
-
-                if (j > 32 && j <= 127)
-                    t.Append(char.ConvertFromUtf32(j));
-                else
-                    t.Append(' ');
-            }
-
-            Debug.WriteLine(t.ToString());
+            m = new MemoryStream(b);
+            w = new BinaryWriter(m, Encoding.UTF8, true);
+            r = new BinaryReader(m, Encoding.UTF8, true);
         }
 
-        public static void DebugUnicodeArray(byte[] buffer, int offset)
+        public static void Return(byte[] b, MemoryStream m, BinaryWriter w, BinaryReader r)
         {
-            StringBuilder t = new(32768);
+            Contract.Assert(b != null && m != null && w != null && r != null);
 
-            for (int i = offset; (i + 1) < buffer.Length; i += 2)
-            {
-                int j = BitConverter.ToUInt16(buffer, i);
+            r.Dispose();
+            w.Dispose();
+            m.Dispose();
 
-                if (j > 32 && j <= 127)
-                    t.Append(char.ConvertFromUtf32(j));
-                else
-                    t.Append(' ');
-            }
-
-            Debug.WriteLine(t.ToString());
+            ArrayPool<byte>.Shared.Return(b);
         }
-#endif
 
+        // NET functions
+
+        public static int GetEndPointAddress(EndPoint ep)
+        {
+            Contract.Assert(ep != null && ep.AddressFamily == AddressFamily.InterNetwork);
+
+            // 0-1 AddressFamily
+            // 2-3 Port
+            // 4-7 Address 
+
+            return Unsafe.ReadUnaligned<int>(ref MemoryMarshal.GetReference(ep.Serialize().Buffer[4..].Span));
+        }
     }
 }

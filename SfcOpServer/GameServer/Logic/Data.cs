@@ -1290,7 +1290,7 @@ namespace SfcOpServer
         {
             // tries to link the client to the launcher
 
-            int address = GetEndPointAddress(client.RemoteEndPoint);
+            int address = Utils.GetEndPointAddress(client.RemoteEndPoint);
 
             //#if DEBUG
             //            if (address == 1140959424)
