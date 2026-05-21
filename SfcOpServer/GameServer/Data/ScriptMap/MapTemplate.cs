@@ -316,31 +316,60 @@ namespace SfcOpServer
 
                 Contract.Assert(_position == char.MinValue);
 
-                // tries to get the settings
+                // tries to load the settings
 
                 GFFile ini = new();
 
                 if (!ini.Load(filename))
                     throw new FileNotFoundException();
 
-                // tries to get the type of the entities
+                // tries to set the background and musics
+
+                string key;
+
+                if (ini.TryGetValue(string.Empty, "Background", out string value, out bool quotes))
+                {
+                    value = value.ToLowerInvariant();
+
+                    if (!value.EndsWith(".mod", StringComparison.Ordinal))
+                        value += ".mod";
+
+                    key = filename[..filename.IndexOf($"/{SubPath}/")] + "/assets/models/space/" + value;
+
+                    if (File.Exists(key))
+                        _background = value;
+                }
+
+                for (i = 0; ini.TryGetValue("Musics", i.ToString(CultureInfo.InvariantCulture), out value, out _); i++)
+                    _musics.Add(value);
+
+                // tries to set the type of the entities
 
                 Dictionary<char, int> e = [];
-
                 char c;
-                string key, value;
-                bool quotes;
 
                 for (c = startChar0; c <= startChar1; c++)
                 {
                     key = c.ToString();
 
                     if (ini.ContainsKey("Planets", key))
+                    {
                         e.Add(c, (int)Entities.Planets);
+
+                        _planets.Add(ini.GetValue("Planets", key, null));
+                    }
                     else if (ini.ContainsKey("Bases", key))
+                    {
                         e.Add(c, (int)Entities.Bases);
+
+                        _bases.Add(ini.GetValue("Bases", key, null));
+                    }
                     else if (ini.ContainsKey("Specials", key))
+                    {
                         e.Add(c, (int)Entities.Specials);
+
+                        _specials.Add(ini.GetValue("Specials", key, null));
+                    }
                     else if (ini.TryGetValue("Ships", key, out value, out quotes))
                     {
                         if (value.StartsWith("A", StringComparison.OrdinalIgnoreCase))
@@ -471,6 +500,19 @@ namespace SfcOpServer
                 if (!_nebulaInfo.ContainsStart)
                     throw new NotSupportedException($"You don't have a '{nebulaChar}' at 1, 1");
 
+                // checks if we have enough positions to allocate all the assets
+
+                const string notEnough = "Not enough positions to allocate all ";
+
+                if (_planets.Count > _entityInfo[(int)Entities.Planets].Count)
+                    throw new NotSupportedException($"{notEnough}[planets]");
+
+                if (_bases.Count > _entityInfo[(int)Entities.Bases].Count)
+                    throw new NotSupportedException($"{notEnough}[bases]");
+
+                if (_specials.Count > _entityInfo[(int)Entities.Specials].Count)
+                    throw new NotSupportedException($"{notEnough}[specials]");
+
                 // checks if we have at least one starting position
 
                 if (_entityInfo[(int)Entities.Allied].Count == 0)
@@ -539,44 +581,6 @@ namespace SfcOpServer
                         }
                     }
                 }
-
-                if (ini.TryGetValue(string.Empty, "Background", out value, out _))
-                {
-                    value = value.ToLowerInvariant();
-
-                    if (!value.EndsWith(".mod", StringComparison.Ordinal))
-                        value += ".mod";
-
-                    key = filename[..filename.IndexOf($"/{SubPath}/")] + "/assets/models/space/" + value;
-
-                    if (File.Exists(key))
-                        _background = value;
-                }
-
-                for (i = 0; ini.TryGetValue("Musics", i.ToString(CultureInfo.InvariantCulture), out value, out _); i++)
-                    _musics.Add(value);
-
-                for (i = 0; ini.TryGetValue("POI/Planets", i.ToString(CultureInfo.InvariantCulture), out value, out _); i++)
-                    _planets.Add(value);
-
-                for (i = 0; ini.TryGetValue("POI/Bases", i.ToString(CultureInfo.InvariantCulture), out value, out _); i++)
-                    _bases.Add(value);
-
-                for (i = 0; ini.TryGetValue("POI/Specials", i.ToString(CultureInfo.InvariantCulture), out value, out _); i++)
-                    _specials.Add(value);
-
-                // checks if we have enough positions to allocate all the assets
-
-                const string notEnough = "Not enough positions to allocate all ";
-
-                if (_planets.Count > _entityInfo[(int)Entities.Planets].Count)
-                    throw new NotSupportedException($"{notEnough}[planets]");
-
-                if (_bases.Count > _entityInfo[(int)Entities.Bases].Count)
-                    throw new NotSupportedException($"{notEnough}[bases]");
-
-                if (_specials.Count > _entityInfo[(int)Entities.Specials].Count)
-                    throw new NotSupportedException($"{notEnough}[specials]");
             }
             catch (Exception)
             {
