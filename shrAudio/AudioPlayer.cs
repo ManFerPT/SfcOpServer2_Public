@@ -1,13 +1,13 @@
 ﻿// NuGet dependencies: MP3Sharp (1.0.5) and Silk.NET.OpenAL (2.23.0)
 
-using Silk.NET.OpenAL;
 using MP3Sharp;
+using Silk.NET.OpenAL;
 
 using System;
-using System.IO;
-using System.Threading.Tasks;
 using System.Collections.Concurrent;
+using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace shrAudio
 {
