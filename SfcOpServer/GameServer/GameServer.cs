@@ -139,13 +139,9 @@ namespace SfcOpServer
             {
                 DuplexSocket.Initialize(socket);
 
-                launcher = new(socket);
+                int address = Utils.GetEndPointAddress(socket.RemoteEndPoint);
 
-#if DEBUG
-                int address = BitConverter.ToInt32([192, 168, 1, 64]); // winXP 63, win7 69
-#else
-                int address = GetEndPointAddress(socket.RemoteEndPoint);
-#endif
+                launcher = new(socket);
 
                 if (_launchers.TryAdd(address, launcher))
                 {
