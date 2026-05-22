@@ -667,7 +667,7 @@ namespace SfcOpServer
             // populates the template with the current terrain content
             // (apparently the client can only display 74 icons at once in the minimap so we should be careful when setting it. it includes the ships, planets and suns)
 
-            const int maxIcons = 40;
+            const int maxIcons = 54;
 
             i = content.BlackHoles;
 
@@ -679,7 +679,7 @@ namespace SfcOpServer
                 {
                     e.MoveNext();
 
-                    Populate(e.Current.Value, _blackHoles);
+                    Populate1(e.Current.Value, _blackHoles);
 
                     i--;
                 }
@@ -697,19 +697,19 @@ namespace SfcOpServer
                 content.IonStorms *= ratio;
 
                 for (i = (int)Math.Truncate(content.Asteroids); i > 0 && _freeQueue.Count > 0; i--)
-                    Populate(_freeQueue.Dequeue(), _asteroids);
+                    Populate1(_freeQueue.Dequeue(), _asteroids);
 
                 for (i = (int)Math.Truncate(content.DustClouds); i > 0 && _freeQueue.Count > 0; i--)
-                    Populate(_freeQueue.Dequeue(), _dustClouds);
+                    Populate1(_freeQueue.Dequeue(), _dustClouds);
 
                 for (i = (int)Math.Truncate(content.IonStorms); i > 0 && _freeQueue.Count > 0; i--)
-                    Populate(_freeQueue.Dequeue(), _ionStorms);
+                    Populate1(_freeQueue.Dequeue(), _ionStorms);
             }
 
             if (content.Nebulas)
-                Populate(_nebulaInfo, _nebulas);
+                Populate1(_nebulaInfo, _nebulas);
 
-            Populate(_sunInfo, _suns);
+            Populate1(_sunInfo, _suns);
 
             // objects and overrides
 
@@ -788,6 +788,8 @@ namespace SfcOpServer
             return new(_map[index]);
         }
 
+        // enqueue
+
         private static void Populate(PriorityQueue<Info, ulong> destination, List<Info> source)
         {
             destination.Clear();
@@ -804,7 +806,9 @@ namespace SfcOpServer
                 destination.Enqueue(p.Value);
         }
 
-        private void Populate(Info info, char[] array)
+        // dequeue
+
+        private void Populate1(Info info, char[] array)
         {
             Contract.Assert(_map[info.Y1][info.X1] == '.');
 
