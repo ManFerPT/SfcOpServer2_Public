@@ -607,15 +607,16 @@ namespace SfcOpServer
             Queue<Character> enemyAI = new();
             Queue<Character> neutralAI = new();
 
-            // gets the slots remaining
+            // gets the slots available
 
-            const int slotsAvailable = 60;
+            const int slotsAvailable = 60; // the game only supports 60 states and\or 60 ships
 
-            int slotsRemaining = slotsAvailable - 1; // 1 slot per script
+            int statesAvailable = slotsAvailable - 1; // one is reserved for the script state
+            int shipsAvailable = slotsAvailable;
 
             // adds the host team
 
-            TryEnqueue(alliedHuman, host, ref slotsRemaining);
+            TryEnqueue(alliedHuman, host, ref statesAvailable, ref shipsAvailable);
 
             foreach (KeyValuePair<int, object> p in hex.Population)
             {
@@ -634,12 +635,12 @@ namespace SfcOpServer
                             character.Client.LauncherId != 0
                         )
                         {
-                            if (!TryEnqueue(alliedHuman, character, ref slotsRemaining))
+                            if (!TryEnqueue(alliedHuman, character, ref statesAvailable, ref shipsAvailable))
                                 goto notSupported;
                         }
                         else if (character.State == Character.States.IsCpuAfkBusyOnline)
                         {
-                            if (!TryEnqueue(alliedAI, character, ref slotsRemaining))
+                            if (!TryEnqueue(alliedAI, character, ref statesAvailable, ref shipsAvailable))
                                 goto notSupported;
                         }
                     }
@@ -647,7 +648,7 @@ namespace SfcOpServer
                     {
                         if (character.State == Character.States.IsCpuAfkBusyOnline)
                         {
-                            if (!TryEnqueue(neutralAI, character, ref slotsRemaining))
+                            if (!TryEnqueue(neutralAI, character, ref statesAvailable, ref shipsAvailable))
                                 goto notSupported;
                         }
                     }
@@ -660,12 +661,12 @@ namespace SfcOpServer
                             character.Client.LauncherId != 0
                         )
                         {
-                            if (!TryEnqueue(enemyHuman, character, ref slotsRemaining))
+                            if (!TryEnqueue(enemyHuman, character, ref statesAvailable, ref shipsAvailable))
                                 goto notSupported;
                         }
                         else if (character.State == Character.States.IsCpuAfkBusyOnline)
                         {
-                            if (!TryEnqueue(enemyAI, character, ref slotsRemaining))
+                            if (!TryEnqueue(enemyAI, character, ref statesAvailable, ref shipsAvailable))
                                 goto notSupported;
                         }
                     }
@@ -674,11 +675,14 @@ namespace SfcOpServer
 
             // checks the number of teams
 
+            if (alliedHuman.Count + enemyHuman.Count > 6) // the game only supports 6 humans players
+                goto notSupported;
+
             int totalAllied = alliedHuman.Count + alliedAI.Count;
             int totalEnemy = enemyHuman.Count + enemyAI.Count;
             int totalNeutral = neutralAI.Count;
 
-            if (totalAllied + totalEnemy + totalNeutral > 20)
+            if (totalAllied + totalEnemy + totalNeutral > 20) // the game only supports 20 teams
                 goto notSupported;
 
             // creates the human teams
@@ -724,18 +728,20 @@ namespace SfcOpServer
             return false;
         }
 
-        private bool TryEnqueue(Queue<Character> team, Character character, ref int slotsRemaining)
+        private bool TryEnqueue(Queue<Character> team, Character character, ref int statesAvailable, ref int shipsAvailable)
         {
             team.Enqueue(character);
 
 #if USING_SHIP_TEAM_STATES
-            slotsRemaining -= 2; // 2 slots per team (team state and victory state)
-            slotsRemaining -= character.ShipCount; // 1 slot per ship (ship state)
+            statesAvailable -= 2; // 1 team state and victory state per team
+            statesAvailable -= character.ShipCount; // 1 ship state per ship
 #else
-            --slotsRemaining; // 1 slot per team (victory state)
+            --statesAvailable; // 1 victory state per team
 #endif
 
-            return slotsRemaining >= 0;
+            shipsAvailable -= character.ShipCount;
+
+            return statesAvailable >= 0 && shipsAvailable >= 0;
         }
 
         private void AddTeam(Mission mission, Character character, TeamTags teamTag)
