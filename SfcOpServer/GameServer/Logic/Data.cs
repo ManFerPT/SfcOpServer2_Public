@@ -48,7 +48,7 @@ namespace SfcOpServer
 
         // characters
 
-        public const int MaxFleetSize = 12; // needs to match the script
+        public const int MaxFleetSize = 3; // needs to match the script
 
         private const int maxStartingPrestige = 1000000;
         private const int maxHumanFleetSize = 3;

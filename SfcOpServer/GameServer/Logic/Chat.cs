@@ -289,13 +289,36 @@ namespace SfcOpServer
                                             case 4:
                                                 race = GetIndex(a[1], _realAbbreviations, StringComparison.OrdinalIgnoreCase, true);
 
-                                                if (race != -1 && _shiplist.TryGetValue(a[2], out data) && a[3].Equals("-m", StringComparison.Ordinal))
+                                                if (race != -1 && _shiplist.TryGetValue(a[2], out data))
                                                 {
-                                                    CreateCharacter((Races)race, source.CharacterLocationX, source.CharacterLocationY, data, out Character character);
+                                                    if (a[3].Equals("-m", StringComparison.Ordinal))
+                                                    {
+                                                        CreateCharacter((Races)race, source.CharacterLocationX, source.CharacterLocationY, data, out Character character);
+
+                                                        _cpuMovements.Remove(character.Id);
+                                                    }
+                                                    else if (int.TryParse(a[3], NumberStyles.None, CultureInfo.InvariantCulture, out int count))
+                                                    {
+                                                        while (count > 0)
+                                                        {
+                                                            CreateCharacter((Races)race, source.CharacterLocationX, source.CharacterLocationY, data, out Character character);
+
+                                                            _cpuMovements.Remove(character.Id);
+
+                                                            for (count -= character.ShipCount; count > 0 && character.ShipCount < GameServer.MaxFleetSize; count--)
+                                                            {
+                                                                CreateShip(data, out Ship ship);
+
+                                                                if (ship.Race != character.CharacterRace)
+                                                                    ModifyShip(ship, character.CharacterRace);
+
+                                                                UpdateCharacter(character, ship);
+                                                                AdjustPopulationCensus(character, ship.BPV);
+                                                            }
+                                                        }
+                                                    }
 
                                                     BroadcastIcons(source.CharacterLocationX, source.CharacterLocationY);
-
-                                                    _cpuMovements.Remove(character.Id);
                                                 }
 
                                                 break;
