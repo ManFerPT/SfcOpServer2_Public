@@ -1,4 +1,6 @@
-﻿using shrServices;
+﻿//#define USING_SHIP_TEAM_STATES
+
+using shrServices;
 
 using System;
 using System.Collections.Generic;
@@ -726,8 +728,12 @@ namespace SfcOpServer
         {
             team.Enqueue(character);
 
-            slotsRemaining -= 2; // 2 slots per team
-            slotsRemaining -= character.ShipCount; // 1 slot per ship
+#if USING_SHIP_TEAM_STATES
+            slotsRemaining -= 2; // 2 slots per team (team state and victory state)
+            slotsRemaining -= character.ShipCount; // 1 slot per ship (ship state)
+#else
+            --slotsRemaining; // 1 slot per team (victory state)
+#endif
 
             return slotsRemaining >= 0;
         }
