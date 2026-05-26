@@ -257,7 +257,7 @@ namespace SfcOpServer
                                         switch (a.Length)
                                         {
                                             case 2:
-                                                if (source.ShipCount < maxHumanFleetSize && _shiplist.TryGetValue(a[1], out data))
+                                                if (source.ShipCount < MaxFleetSize && _shiplist.TryGetValue(a[1], out data))
                                                 {
                                                     CreateShip(data, out Ship ship);
 
@@ -296,29 +296,37 @@ namespace SfcOpServer
                                                         CreateCharacter((Races)race, source.CharacterLocationX, source.CharacterLocationY, data, out Character character);
 
                                                         _cpuMovements.Remove(character.Id);
+
+                                                        BroadcastIcons(source.CharacterLocationX, source.CharacterLocationY);
                                                     }
                                                     else if (int.TryParse(a[3], NumberStyles.None, CultureInfo.InvariantCulture, out int count))
                                                     {
-                                                        while (count > 0)
+                                                        if (count > 0)
                                                         {
-                                                            CreateCharacter((Races)race, source.CharacterLocationX, source.CharacterLocationY, data, out Character character);
-
-                                                            _cpuMovements.Remove(character.Id);
-
-                                                            for (count -= character.ShipCount; count > 0 && character.ShipCount < GameServer.MaxFleetSize; count--)
+                                                            MapHex hex = _map[source.CharacterLocationX + source.CharacterLocationY * _mapWidth];
+                                                           
+                                                            do
                                                             {
-                                                                CreateShip(data, out Ship ship);
+                                                                CreateCharacter((Races)race, source.CharacterLocationX, source.CharacterLocationY, data, out Character character);
 
-                                                                if (ship.Race != character.CharacterRace)
-                                                                    ModifyShip(ship, character.CharacterRace);
+                                                                _cpuMovements.Remove(character.Id);
 
-                                                                UpdateCharacter(character, ship);
-                                                                AdjustPopulationCensus(character, ship.BPV);
+                                                                for (count -= character.ShipCount; count > 0 && character.ShipCount < GameServer.MaxFleetSize; count--)
+                                                                {
+                                                                    CreateShip(data, out Ship ship);
+
+                                                                    if (ship.Race != character.CharacterRace)
+                                                                        ModifyShip(ship, character.CharacterRace);
+
+                                                                    UpdateCharacter(character, ship);
+                                                                    AdjustPopulationCensus(hex.Census, (int)character.CharacterRace, 1, ship.BPV);
+                                                                }
                                                             }
+                                                            while (count > 0);
+
+                                                            BroadcastIcons(source.CharacterLocationX, source.CharacterLocationY);
                                                         }
                                                     }
-
-                                                    BroadcastIcons(source.CharacterLocationX, source.CharacterLocationY);
                                                 }
 
                                                 break;

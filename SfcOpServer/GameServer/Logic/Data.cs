@@ -51,7 +51,6 @@ namespace SfcOpServer
         public const int MaxFleetSize = 3; // needs to match the script
 
         private const int maxStartingPrestige = 1000000;
-        private const int maxHumanFleetSize = 3;
 
         // cpu movement
 
@@ -2896,7 +2895,7 @@ namespace SfcOpServer
 
             if (isFirstBid)
             {
-                if (character.CharacterCurrentPrestige < bidValue || character.ShipCount + character.Bids >= maxHumanFleetSize)
+                if (character.CharacterCurrentPrestige < bidValue || character.ShipCount + character.Bids >= MaxFleetSize)
                     return false;
 
                 character.Bids++;
@@ -2924,7 +2923,7 @@ namespace SfcOpServer
             }
             else
             {
-                if (character.CharacterCurrentPrestige < bidValue || character.ShipCount + character.Bids >= maxHumanFleetSize)
+                if (character.CharacterCurrentPrestige < bidValue || character.ShipCount + character.Bids >= MaxFleetSize)
                     return false;
 
                 // returns the last bid to its last owner

@@ -919,9 +919,9 @@ namespace SfcOpServer
                             // a human character can have up to 3 ships in his fleet
                             // but, here, we need to give room for any bids that are still pending
 
-                            Contract.Assert(owner.Bids >= 0 && owner.Bids < maxHumanFleetSize);
+                            Contract.Assert(owner.Bids >= 0 && owner.Bids < MaxFleetSize);
 
-                            c = maxHumanFleetSize - owner.Bids;
+                            c = MaxFleetSize - owner.Bids;
                         }
 
                         if (sortedItems.Count > c)
@@ -1060,7 +1060,7 @@ namespace SfcOpServer
 
                         sortedItems.Clear();
 
-                        Contract.Assert((IsCpu && owner.ShipCount <= MaxFleetSize) || (!IsCpu && owner.ShipCount <= maxHumanFleetSize));
+                        Contract.Assert(owner.ShipCount <= MaxFleetSize);
                     }
                 }
             }
