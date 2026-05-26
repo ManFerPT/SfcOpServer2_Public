@@ -609,7 +609,7 @@ namespace SfcOpServer
 
             // initializes the slots
 
-            const int slotsSupported = 60; // number of 'tActor' and 'tState' supported by the game
+            const int slotsSupported = 64; // number of 'tActor' and 'tState' supported by the game
 
             int slotsAvailable = slotsSupported - 1; // 1 slot is used by 'tScript'
 
