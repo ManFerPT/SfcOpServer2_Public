@@ -532,27 +532,6 @@ namespace shrQ3
                     cell.Y = height >> 1;
                 }
             }
-
-            /*
-                // general error
-
-                tVisualGroupAsset generalError = (tVisualGroupAsset)q3.GetAsset("General_Error");
-
-                const int incX = 14;
-                const int incY = -7;
-
-                generalError.Cells[0].X = (width >> 1) - 4 + incX;
-                generalError.Cells[0].Y = (height >> 1) + 8 + incY;
-
-                generalError.Cells[1].X = (width >> 1) - 166 + incX;
-                generalError.Cells[1].Y = (height >> 1) - 133 + incY;
-
-                generalError.Cells[2].X = (width >> 1) - 131 + incX;
-                generalError.Cells[2].Y = (height >> 1) - 67 + incY;
-
-                generalError.Cells[3].X = (width >> 1) - 4 + incX;
-                generalError.Cells[3].Y = (height >> 1) + 143 + incY;
-            */
         }
 
         private static tSprite GetSprite(BinaryReader r, tBmpAsset bitmap)

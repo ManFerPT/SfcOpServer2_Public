@@ -9,9 +9,7 @@
     <Import_RootNamespace>shrQ3</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="$(MSBuildThisFileDirectory)Libraries\clsBmp.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Libraries\clsRes.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Libraries\clsUI.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)clsQ3.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)clsQ3\tObject\tAsset.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)clsQ3\tObject\tAsset\tBmpAsset.cs" />
