@@ -361,7 +361,7 @@ namespace shrQ3
                 f = new(filename, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
                 w = new(f, Encoding.UTF8, leaveOpen: true);
 
-                Save(w, indexingMethod, spritesSize, assetsSize);
+                Save(w, indexingMethod, updateSprites: true, spritesSize, assetsSize);
 
                 return true;
             }
@@ -376,22 +376,25 @@ namespace shrQ3
             }
         }
 
-        public void Save(BinaryWriter w, IndexingMethods indexingMethod, int spritesSize = DefaultSpritesSize, int assetsSize = DefaultAssetsSize)
+        public void Save(BinaryWriter w, IndexingMethods indexingMethod, bool updateSprites, int spritesSize = DefaultSpritesSize, int assetsSize = DefaultAssetsSize)
         {
             Contract.Assert(indexingMethod >= IndexingMethods.None && indexingMethod < IndexingMethods.Total);
 
             MemoryStream m1 = null;
-            MemoryStream m2 = null;
-
             BinaryWriter w1 = null;
+
+            MemoryStream m2 = null;
             BinaryWriter w2 = null;
 
             try
             {
-                m1 = new(spritesSize);
-                m2 = new(assetsSize);
+                if (updateSprites)
+                {
+                    m1 = new(spritesSize);
+                    w1 = new(m1, Encoding.UTF8, leaveOpen: true);
+                }
 
-                w1 = new(m1, Encoding.UTF8, leaveOpen: true);
+                m2 = new(assetsSize);
                 w2 = new(m2, Encoding.UTF8, leaveOpen: true);
 
                 Dictionary<string, int> offsets = new(_sprites.Count);
@@ -400,7 +403,7 @@ namespace shrQ3
                 {
                     tAsset asset = p.Value;
 
-                    if (asset.Type == tAsset.eType.Bmp)
+                    if (updateSprites && asset.Type == tAsset.eType.Bmp)
                     {
                         tBmpAsset bitmap = (tBmpAsset)asset;
                         tSprite sprite = _sprites[bitmap.HashKey];
@@ -428,16 +431,26 @@ namespace shrQ3
                     asset.WriteTo(w2);
                 }
 
-                // writes the files
+                if (updateSprites)
+                {
+                    // writes the files
 
-                _files.DirectoryOffset = (int)(m1.Position + _files.Length);
+                    _files.DirectoryOffset = (int)(m1.Position + _files.Length);
 
-                _files.WriteTo(w);
+                    _files.WriteTo(w);
 
-                // writes the sprites
+                    // writes the sprites
 
-                m1.SetLength(m1.Position);
-                m1.WriteTo(w.BaseStream);
+                    m1.SetLength(m1.Position);
+                    m1.WriteTo(w.BaseStream);
+                }
+                else
+                {
+                    // advances to the last known directory offset
+                    // (we assume here that the sprites didn't changed)
+
+                    w.Seek(_files.DirectoryOffset, SeekOrigin.Begin);
+                }
 
                 // writes the directories
 
@@ -459,9 +472,9 @@ namespace shrQ3
             finally
             {
                 w2?.Dispose();
-                w1?.Dispose();
-
                 m2?.Dispose();
+
+                w1?.Dispose();
                 m1?.Dispose();
             }
         }

@@ -121,7 +121,7 @@ namespace shrQ3
 
                 w.Seek(0, SeekOrigin.Begin);
 
-                q3.Save(w, clsQ3.IndexingMethods.FileOffset);
+                q3.Save(w, clsQ3.IndexingMethods.FileOffset, updateSprites: false);
 
                 return true;
             }
