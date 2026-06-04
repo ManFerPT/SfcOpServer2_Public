@@ -31,10 +31,7 @@ namespace shrQ3
 
         // public constants
 
-        public const int DefaultSpritesSize = 1 << 29; // 512 MB
-        public const int DefaultAssetsSize = 1 << 23;  // 8 MB
-
-        public const int DefaultBufferSize = 1 << 25;  // 32 MB
+        public const int DefaultBufferSize = 1 << 26;  // 64MB
 
         // transparent color (argb)
 
@@ -351,7 +348,7 @@ namespace shrQ3
 
         // tries to save this
 
-        public bool Save(string filename, IndexingMethods indexingMethod, int spritesSize = DefaultSpritesSize, int assetsSize = DefaultAssetsSize)
+        public bool Save(string filename, IndexingMethods indexingMethod, bool updateSprites = true)
         {
             FileStream f = null;
             BinaryWriter w = null;
@@ -361,7 +358,7 @@ namespace shrQ3
                 f = new(filename, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
                 w = new(f, Encoding.UTF8, leaveOpen: true);
 
-                Save(w, indexingMethod, updateSprites: true, spritesSize, assetsSize);
+                Save(w, indexingMethod, updateSprites);
 
                 return true;
             }
@@ -376,9 +373,11 @@ namespace shrQ3
             }
         }
 
-        public void Save(BinaryWriter w, IndexingMethods indexingMethod, bool updateSprites, int spritesSize = DefaultSpritesSize, int assetsSize = DefaultAssetsSize)
+        public void Save(BinaryWriter w, IndexingMethods indexingMethod, bool updateSprites)
         {
             Contract.Assert(indexingMethod >= IndexingMethods.None && indexingMethod < IndexingMethods.Total);
+
+            Dictionary<string, int> offsets = null;
 
             MemoryStream m1 = null;
             BinaryWriter w1 = null;
@@ -390,14 +389,14 @@ namespace shrQ3
             {
                 if (updateSprites)
                 {
-                    m1 = new(spritesSize);
+                    offsets = new(_sprites.Count);
+
+                    m1 = new(1 << 27); // 128MB
                     w1 = new(m1, Encoding.UTF8, leaveOpen: true);
                 }
 
-                m2 = new(assetsSize);
+                m2 = new(1 << 20); // 1MB
                 w2 = new(m2, Encoding.UTF8, leaveOpen: true);
-
-                Dictionary<string, int> offsets = new(_sprites.Count);
 
                 foreach (KeyValuePair<int, tAsset> p in _assets)
                 {
