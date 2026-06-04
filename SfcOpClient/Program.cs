@@ -141,7 +141,7 @@ namespace SfcOpClient
 
             Process process = null;
 
-            TryDeleteTemporaryFiles(directoryName);
+            DeleteTemporaryFiles(directoryName);
 
             try
             {
@@ -494,22 +494,20 @@ Windows Registry Editor Version 5.00
             return client != null;
         }
 
-        private static void TryDeleteTemporaryFiles(string directoryName)
+        private static void DeleteTemporaryFiles(string directoryName)
         {
-            string filename = Path.Combine(directoryName, "_wonStarFleetCommand2motd.txt");
+            TryDelete(directoryName, "_wonStarFleetCommand2motd.txt");
+            TryDelete(directoryName, "_wonsysmotd.txt");
 
-            if (File.Exists(filename))
-                File.Delete(filename);
+            TryDelete(directoryName, Client27001.ScriptPath);
+        }
 
-            filename = Path.Combine(directoryName, "_wonsysmotd.txt");
+        private static void TryDelete(string directoryName, string filename)
+        {
+            string path = Path.Combine(directoryName, filename);
 
-            if (File.Exists(filename))
-                File.Delete(filename);
-
-            filename = Path.Combine(directoryName, Client27001.ScriptPath);
-
-            if (File.Exists(filename))
-                File.Delete(filename);
+            if (File.Exists(path))
+                File.Delete(path);
         }
 
         private static void TryKill(Process process)
