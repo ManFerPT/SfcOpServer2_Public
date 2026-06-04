@@ -31,7 +31,7 @@ namespace shrQ3
 
         // public constants
 
-        public const int DefaultBufferSize = 1 << 26;  // 64MB
+        public const int DefaultBufferSize = 1 << 25;  // 32MB
 
         // transparent color (argb)
 
@@ -192,13 +192,13 @@ namespace shrQ3
         {
             Contract.Assert(IsEmpty);
 
+            Stream s = r.BaseStream;
+
             // tries to load the files
 
             _files.ReadFrom(r);
 
             // tries to load the directories
-
-            Stream s = r.BaseStream;
 
             s.Seek(_files.DirectoryOffset, SeekOrigin.Begin);
 
@@ -348,17 +348,17 @@ namespace shrQ3
 
         // tries to save this
 
-        public bool Save(string filename, IndexingMethods indexingMethod, bool updateSprites = true)
+        public bool Save(string filename, IndexingMethods indexingMethod)
         {
             FileStream f = null;
             BinaryWriter w = null;
 
             try
             {
-                f = new(filename, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
+                f = new(filename, FileMode.Create, FileAccess.Write, FileShare.None);
                 w = new(f, Encoding.UTF8, leaveOpen: true);
 
-                Save(w, indexingMethod, updateSprites);
+                Save(w, indexingMethod, updateSprites: true);
 
                 return true;
             }
@@ -377,7 +377,8 @@ namespace shrQ3
         {
             Contract.Assert(indexingMethod >= IndexingMethods.None && indexingMethod < IndexingMethods.Total);
 
-            Dictionary<string, int> offsets = null;
+            Stream s = w.BaseStream;
+            Dictionary<string, int> d = null;
 
             MemoryStream m1 = null;
             BinaryWriter w1 = null;
@@ -389,7 +390,7 @@ namespace shrQ3
             {
                 if (updateSprites)
                 {
-                    offsets = new(_sprites.Count);
+                    d = new(_sprites.Count);
 
                     m1 = new(1 << 27); // 128MB
                     w1 = new(m1, Encoding.UTF8, leaveOpen: true);
@@ -417,11 +418,11 @@ namespace shrQ3
 
                             sprite.WriteTo(w1);
                         }
-                        else if (!offsets.TryGetValue(bitmap.HashKey, out bitmap.FileOffset))
+                        else if (!d.TryGetValue(bitmap.HashKey, out bitmap.FileOffset))
                         {
                             bitmap.FileOffset = (int)(m1.Position + _files.Length);
 
-                            offsets.Add(bitmap.HashKey, bitmap.FileOffset);
+                            d.Add(bitmap.HashKey, bitmap.FileOffset);
 
                             sprite.WriteTo(w1);
                         }
@@ -441,14 +442,14 @@ namespace shrQ3
                     // writes the sprites
 
                     m1.SetLength(m1.Position);
-                    m1.WriteTo(w.BaseStream);
+                    m1.WriteTo(s);
                 }
                 else
                 {
                     // advances to the last known directory offset
                     // (we assume here that the sprites didn't changed)
 
-                    w.Seek(_files.DirectoryOffset, SeekOrigin.Begin);
+                    s.Seek(_files.DirectoryOffset, SeekOrigin.Begin);
                 }
 
                 // writes the directories
@@ -461,12 +462,12 @@ namespace shrQ3
                 // writes the assets
 
                 m2.SetLength(m2.Position);
-                m2.WriteTo(w.BaseStream);
+                m2.WriteTo(s);
 
-                // flushes the file
+                // flushes the stream
 
-                w.BaseStream.SetLength(w.BaseStream.Position);
-                w.BaseStream.Flush();
+                s.SetLength(s.Position);
+                s.Flush();
             }
             finally
             {
