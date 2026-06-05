@@ -499,7 +499,10 @@ Windows Registry Editor Version 5.00
             TryDelete(directoryName, "_wonStarFleetCommand2motd.txt");
             TryDelete(directoryName, "_wonsysmotd.txt");
 
-            TryDelete(directoryName, Client27001.ScriptPath);
+            string path = Path.Combine(directoryName, Client27001.ScriptDirectory);
+
+            TryDelete(path, Client27001.ScriptName);
+            TryDelete(path, "scripts.lst");
         }
 
         private static void TryDelete(string directoryName, string filename)
@@ -507,7 +510,14 @@ Windows Registry Editor Version 5.00
             string path = Path.Combine(directoryName, filename);
 
             if (File.Exists(path))
-                File.Delete(path);
+            {
+                FileInfo file = new(path);
+
+                if (file.IsReadOnly)
+                    file.IsReadOnly = false;
+
+                file.Delete();
+            }
         }
 
         private static void TryKill(Process process)

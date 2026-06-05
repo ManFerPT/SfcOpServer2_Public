@@ -19,7 +19,8 @@ namespace SfcOpClient
 {
     public class Client27001(string localPath, IPEndPoint remoteEP) : IDisposable
     {
-        public const string ScriptPath = "Assets/Scripts/Met_Common.ini";
+        public const string ScriptDirectory = "Assets/Scripts/";
+        public const string ScriptName = "Met_Common.ini";
 
         private const int minimumBufferSize = 13;
         private const int maximumBufferSize = 262144;
@@ -204,7 +205,7 @@ namespace SfcOpClient
                     case 0:
                         Contract.Assert(msg.PathBuffer.Length == 0);
 
-                        filename = Path.Combine(_localPath, ScriptPath);
+                        filename = Path.Combine(_localPath, ScriptDirectory, ScriptName);
 
                         break;
 
