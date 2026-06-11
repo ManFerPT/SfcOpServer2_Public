@@ -232,7 +232,7 @@ namespace SfcOpServer
             _dustClouds = ['<', '>', 'd', 'D'];
             _ionStorms = ['{'];
             _nebulas = ['&', '?', 'c', 'C'];
-            _suns = ['(', ')', '!'];
+            _suns = ['!']; // '(' and ')' behave in a different way
         }
 
         public MapTemplate(string filename)
@@ -812,7 +812,9 @@ namespace SfcOpServer
         {
             Contract.Assert(_map[info.Y1][info.X1] == '.');
 
-            _map[info.Y1][info.X1] = array[_rand.NextInt32(array.Length)];
+            int index = array.Length > 1 ? _rand.NextInt32(array.Length) : 0;
+
+            _map[info.Y1][info.X1] = array[index];
         }
 
         private void Populate1(Queue<Info> queue)
