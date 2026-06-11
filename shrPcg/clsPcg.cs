@@ -38,13 +38,10 @@ namespace shrPcg
 
             _lock = new();
 
-            lock (_lock)
-            {
-                _lcgMultiplier = new(0x0fc94e3bf4e9ab32, 0x866458cd56f5e605);
-                _lcgState = Unsafe.ReadUnaligned<UInt128>(ref MemoryMarshal.GetReference(data)) | UInt128.One;
+            _lcgMultiplier = new(0x0fc94e3bf4e9ab32, 0x866458cd56f5e605);
+            _lcgState = Unsafe.ReadUnaligned<UInt128>(ref MemoryMarshal.GetReference(data)) | UInt128.One;
 
-                Contract.Assert(UInt128.IsOddInteger(_lcgState));
-            }
+            Contract.Assert(UInt128.IsOddInteger(_lcgState));
 
             Shared = new();
 
